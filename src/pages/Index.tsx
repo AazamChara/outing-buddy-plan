@@ -1,6 +1,5 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Hero } from "@/components/Hero";
 import { GroupCard } from "@/components/GroupCard";
 import groupPlaceholder from "@/assets/group-placeholder.jpg";
 
@@ -35,9 +34,6 @@ const Index = () => {
   return (
     <div className="min-h-screen pb-20 md:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section */}
-        <Hero />
-
         {/* Groups Section */}
         <section className="mb-8">
           <div className="flex items-center justify-between mb-6">
