@@ -11,6 +11,7 @@ import { useState } from "react";
 import { PermissionsDialog } from "@/components/PermissionsDialog";
 import { ContactSelector } from "@/components/ContactSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 interface Group {
   id: number;
@@ -49,6 +50,7 @@ const initialGroups: Group[] = [
 ];
 
 const Index = () => {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
@@ -110,7 +112,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {groups.map((group, index) => (
               <div key={group.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                <GroupCard {...group} />
+                <GroupCard {...group} onClick={() => navigate(`/group/${group.id}`)} />
               </div>
             ))}
           </div>
