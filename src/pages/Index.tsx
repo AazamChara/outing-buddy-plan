@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { PermissionsDialog } from "@/components/PermissionsDialog";
+import { ContactSelector } from "@/components/ContactSelector";
 
 interface Group {
   id: number;
@@ -52,7 +53,7 @@ const Index = () => {
   const [groupPhotoPreview, setGroupPhotoPreview] = useState<string | null>(null);
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
-  const [inviteMembers, setInviteMembers] = useState("");
+  const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
 
   const handleCreateGroup = () => {
     const newGroup: Group = {
@@ -70,7 +71,7 @@ const Index = () => {
     // Reset form
     setGroupName("");
     setDescription("");
-    setInviteMembers("");
+    setSelectedFriends([]);
     setGroupPhoto(null);
     setGroupPhotoPreview(null);
   };
@@ -190,15 +191,15 @@ const Index = () => {
               />
             </div>
 
-            {/* Invite Members */}
+            {/* Add Friends from Contacts */}
             <div className="space-y-2">
-              <Label htmlFor="invite-members">Invite Members</Label>
-              <Input
-                id="invite-members"
-                placeholder="Enter emails or phone numbers"
-                value={inviteMembers}
-                onChange={(e) => setInviteMembers(e.target.value)}
-              />
+              <Label>Add Friends</Label>
+              <ContactSelector onContactsSelected={setSelectedFriends} />
+              {selectedFriends.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedFriends.length} friend(s) selected
+                </p>
+              )}
             </div>
 
             {/* Action Buttons */}

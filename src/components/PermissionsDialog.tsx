@@ -62,25 +62,32 @@ export const PermissionsDialog = () => {
         // @ts-ignore - Contacts API is not in TypeScript types yet
         const contacts = await navigator.contacts.select(props, { multiple: true });
         
-        console.log("Selected contacts:", contacts);
+        // Store contacts in localStorage for later use
+        const formattedContacts = contacts.map((contact: any) => ({
+          name: contact.name?.[0] || 'Unknown',
+          phone: contact.tel?.[0] || '',
+          email: contact.email?.[0] || ''
+        }));
+        
+        localStorage.setItem("syncedContacts", JSON.stringify(formattedContacts));
         setContactsAttempted(true);
         
         toast({
-          title: "Contacts selected",
-          description: `You selected ${contacts.length} contact(s).`,
+          title: "Contacts synced",
+          description: `${formattedContacts.length} contact(s) synced successfully!`,
         });
       } catch (error) {
         console.error("Contact picker error:", error);
         toast({
           title: "Contact access cancelled",
-          description: "You can invite friends manually anytime.",
+          description: "You can sync contacts later from settings.",
         });
       }
     } else {
       setContactsAttempted(true);
       toast({
         title: "Contacts not supported",
-        description: "Your browser doesn't support contact picking. You can still invite friends manually!",
+        description: "Your browser doesn't support contact syncing. You can add friends manually!",
       });
     }
   };
@@ -143,14 +150,14 @@ export const PermissionsDialog = () => {
               <Users className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Invite Friends</h3>
+              <h3 className="font-semibold mb-1">Sync Contacts</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Select contacts to invite to your groups (optional)
+                Sync your contacts to easily add friends to groups
               </p>
               {contactsAttempted ? (
                 <div className="flex items-center gap-2 text-sm text-green-600">
                   <Check className="h-4 w-4" />
-                  <span>Contacts accessed</span>
+                  <span>Contacts synced</span>
                 </div>
               ) : (
                 <Button 
@@ -158,7 +165,7 @@ export const PermissionsDialog = () => {
                   size="sm" 
                   onClick={handleContactsPicker}
                 >
-                  Select Contacts
+                  Sync Contacts
                 </Button>
               )}
             </div>
