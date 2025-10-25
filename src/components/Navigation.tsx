@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { title: "Home", path: "/", icon: Home },
-  { title: "Account", path: "/account", icon: User },
   { title: "Activities", path: "/activities", icon: Calendar },
+  { title: "Account", path: "/account", icon: User },
 ];
 
 export const MobileNav = () => {
