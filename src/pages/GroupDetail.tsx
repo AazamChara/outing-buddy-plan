@@ -21,7 +21,10 @@ interface PollOption {
   text: string;
   votes: number;
   voted?: boolean;
+  reactions?: { emoji: string; count: number }[];
 }
+
+const availableReactions = ["👍", "❤️", "🎉", "🔥", "😍", "👏"];
 
 interface Poll {
   id: number;
@@ -42,9 +45,9 @@ const mockPolls: Poll[] = [
     eventTime: "14:00",
     location: "Central Park, NYC",
     options: [
-      { id: 1, text: "Café Crawl", votes: 3 },
-      { id: 2, text: "Hiking", votes: 4, voted: true },
-      { id: 3, text: "Movie Marathon", votes: 2 },
+      { id: 1, text: "Café Crawl", votes: 3, reactions: [{ emoji: "☕", count: 2 }, { emoji: "😋", count: 1 }] },
+      { id: 2, text: "Hiking", votes: 4, voted: true, reactions: [{ emoji: "🏔️", count: 3 }, { emoji: "💪", count: 2 }] },
+      { id: 3, text: "Movie Marathon", votes: 2, reactions: [{ emoji: "🍿", count: 1 }] },
     ],
     totalVotes: 9,
     anonymousVoting: false,
@@ -92,6 +95,38 @@ const GroupDetail = () => {
             votes: opt.id === optionId ? opt.votes + 1 : opt.votes - (opt.voted ? 1 : 0),
           })),
           totalVotes: poll.totalVotes + 1,
+        };
+      }
+      return poll;
+    }));
+  };
+
+  const handleReaction = (pollId: number, optionId: number, emoji: string) => {
+    setPolls(polls.map(poll => {
+      if (poll.id === pollId) {
+        return {
+          ...poll,
+          options: poll.options.map(opt => {
+            if (opt.id === optionId) {
+              const reactions = opt.reactions || [];
+              const existingReaction = reactions.find(r => r.emoji === emoji);
+              
+              if (existingReaction) {
+                return {
+                  ...opt,
+                  reactions: reactions.map(r =>
+                    r.emoji === emoji ? { ...r, count: r.count + 1 } : r
+                  ),
+                };
+              } else {
+                return {
+                  ...opt,
+                  reactions: [...reactions, { emoji, count: 1 }],
+                };
+              }
+            }
+            return opt;
+          }),
         };
       }
       return poll;
@@ -378,39 +413,85 @@ const GroupDetail = () => {
                 )}
               </div>
 
-              <div className="space-y-2 mb-4">
+              <div className="space-y-3 mb-4">
                 {poll.options.map((option) => {
                   const percentage = poll.totalVotes > 0 
                     ? (option.votes / poll.totalVotes) * 100 
                     : 0;
+                  const [showReactions, setShowReactions] = useState(false);
                   
                   return (
-                    <button
-                      key={option.id}
-                      onClick={() => handleVote(poll.id, option.id)}
-                      className={`
-                        w-full p-3 rounded-lg border text-left transition-all
-                        ${option.voted 
-                          ? 'border-[hsl(var(--teal))] bg-[hsl(var(--teal))]/10' 
-                          : 'border-border hover:border-[hsl(var(--teal))]/50 hover:bg-secondary/50'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-sm">{option.text}</span>
-                        {option.voted && (
-                          <span className="text-xs text-[hsl(var(--teal))] font-semibold">✓</span>
+                    <div key={option.id} className="space-y-2">
+                      <button
+                        onClick={() => handleVote(poll.id, option.id)}
+                        className={`
+                          w-full p-3 rounded-lg border text-left transition-all
+                          ${option.voted 
+                            ? 'border-[hsl(var(--teal))] bg-[hsl(var(--teal))]/10' 
+                            : 'border-border hover:border-[hsl(var(--teal))]/50 hover:bg-secondary/50'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">{option.text}</span>
+                          <div className="flex items-center gap-2">
+                            {option.voted && (
+                              <span className="text-xs text-[hsl(var(--teal))] font-semibold">✓</span>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowReactions(!showReactions);
+                              }}
+                              className="text-lg hover:scale-125 transition-transform"
+                            >
+                              😊
+                            </button>
+                          </div>
+                        </div>
+                        {poll.totalVotes > 0 && (
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
+                            <div 
+                              className="h-full bg-[hsl(var(--teal))] transition-all duration-300"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
                         )}
-                      </div>
-                      {poll.totalVotes > 0 && (
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-[hsl(var(--teal))] transition-all duration-300"
-                            style={{ width: `${percentage}%` }}
-                          />
+                        
+                        {/* Existing Reactions Display */}
+                        {option.reactions && option.reactions.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {option.reactions.map((reaction, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/50 rounded-full text-xs animate-bounce-in"
+                              >
+                                <span className="text-base">{reaction.emoji}</span>
+                                <span className="text-muted-foreground">{reaction.count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Reaction Picker */}
+                      {showReactions && (
+                        <div className="flex gap-2 px-3 py-2 bg-card border border-border rounded-lg animate-fade-in">
+                          {availableReactions.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => {
+                                handleReaction(poll.id, option.id, emoji);
+                                setShowReactions(false);
+                              }}
+                              className="text-2xl hover:scale-150 transition-transform active:scale-125"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
                         </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
