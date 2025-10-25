@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle, Plus, Search, Clock } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface PollOption {
   id: number;
@@ -19,22 +24,28 @@ interface PollOption {
 interface Poll {
   id: number;
   title: string;
-  daysLeft: number;
+  eventDate?: Date;
+  eventTime?: string;
+  location?: string;
   options: PollOption[];
   totalVotes: number;
+  anonymousVoting: boolean;
 }
 
 const mockPolls: Poll[] = [
   {
     id: 1,
     title: "Weekend Vibes?",
-    daysLeft: 2,
+    eventDate: new Date(2025, 9, 27),
+    eventTime: "14:00",
+    location: "Central Park, NYC",
     options: [
       { id: 1, text: "Café Crawl", votes: 3 },
       { id: 2, text: "Hiking", votes: 4, voted: true },
       { id: 3, text: "Movie Marathon", votes: 2 },
     ],
     totalVotes: 9,
+    anonymousVoting: false,
   },
 ];
 
@@ -47,7 +58,10 @@ const GroupDetail = () => {
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false);
   const [pollTitle, setPollTitle] = useState("");
   const [pollOptions, setPollOptions] = useState<string[]>(["", "", ""]);
-  const [pollDuration, setPollDuration] = useState("2");
+  const [eventDate, setEventDate] = useState<Date>();
+  const [eventTime, setEventTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [anonymousVoting, setAnonymousVoting] = useState(false);
 
   const groupName = "Adventure Squad";
 
@@ -75,20 +89,26 @@ const GroupDetail = () => {
     const newPoll: Poll = {
       id: polls.length + 1,
       title: pollTitle,
-      daysLeft: parseInt(pollDuration),
+      eventDate,
+      eventTime,
+      location,
       options: validOptions.map((text, idx) => ({
         id: idx + 1,
         text,
         votes: 0,
       })),
       totalVotes: 0,
+      anonymousVoting,
     };
 
     setPolls([newPoll, ...polls]);
     setIsCreatePollOpen(false);
     setPollTitle("");
     setPollOptions(["", "", ""]);
-    setPollDuration("2");
+    setEventDate(undefined);
+    setEventTime("");
+    setLocation("");
+    setAnonymousVoting(false);
   };
 
   const updatePollOption = (index: number, value: string) => {
@@ -106,10 +126,63 @@ const GroupDetail = () => {
       <div className="space-y-2">
         <Label>Poll Question</Label>
         <Input
-          placeholder="What should we do this weekend?"
+          placeholder="e.g., Weekend Vibes?"
           value={pollTitle}
           onChange={(e) => setPollTitle(e.target.value)}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !eventDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {eventDate ? format(eventDate, "dd-MM-yyyy") : "dd-mm-yyyy"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={eventDate}
+              onSelect={setEventDate}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Time</Label>
+        <div className="relative">
+          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="time"
+            value={eventTime}
+            onChange={(e) => setEventTime(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Location</Label>
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="e.g., Central Park, NYC"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -133,14 +206,14 @@ const GroupDetail = () => {
         </Button>
       </div>
 
-      <div className="space-y-2">
-        <Label>Duration (days)</Label>
-        <Input
-          type="number"
-          min="1"
-          max="30"
-          value={pollDuration}
-          onChange={(e) => setPollDuration(e.target.value)}
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label>Anonymous Voting</Label>
+          <p className="text-xs text-muted-foreground">Hide who voted for what</p>
+        </div>
+        <Switch
+          checked={anonymousVoting}
+          onCheckedChange={setAnonymousVoting}
         />
       </div>
 
@@ -153,7 +226,7 @@ const GroupDetail = () => {
           Cancel
         </Button>
         <Button
-          className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
+          className="flex-1 bg-[hsl(var(--peach))] hover:bg-[hsl(var(--peach-dark))] text-foreground"
           onClick={handleCreatePoll}
           disabled={!pollTitle.trim() || pollOptions.filter(opt => opt.trim()).length < 2}
         >
@@ -225,12 +298,25 @@ const GroupDetail = () => {
               key={poll.id}
               className="p-5 border-border/50 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="font-semibold text-foreground">{poll.title}</h3>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {poll.daysLeft} days left
-                </div>
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground mb-2">{poll.title}</h3>
+                {(poll.eventDate || poll.eventTime || poll.location) && (
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {poll.eventDate && (
+                      <div className="flex items-center gap-1">
+                        <CalendarIcon className="h-3 w-3" />
+                        <span>{format(poll.eventDate, "dd MMM yyyy")}</span>
+                        {poll.eventTime && <span className="ml-1">at {poll.eventTime}</span>}
+                      </div>
+                    )}
+                    {poll.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>{poll.location}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 mb-4">
