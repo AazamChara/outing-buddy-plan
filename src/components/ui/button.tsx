@@ -9,12 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        hero: "bg-gradient-to-r from-[hsl(var(--teal))] to-[hsl(var(--teal-light))] text-white font-semibold shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] hover:scale-105 transition-[var(--transition-bounce)]",
+        vote: "bg-[hsl(var(--peach))] text-[hsl(var(--accent-foreground))] hover:bg-[hsl(var(--peach-dark))] shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-card)] transition-[var(--transition-smooth)]",
+        fab: "bg-gradient-to-br from-[hsl(var(--teal))] to-[hsl(var(--teal-light))] text-white rounded-full shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] hover:scale-110 transition-[var(--transition-bounce)]",
       },
       size: {
         default: "h-10 px-4 py-2",
