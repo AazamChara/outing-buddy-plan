@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { PermissionsDialog } from "@/components/PermissionsDialog";
 
 interface Group {
   id: number;
@@ -90,6 +91,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen pb-20 md:pb-8">
+      <PermissionsDialog />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Groups Section */}
         <section className="mb-8">
