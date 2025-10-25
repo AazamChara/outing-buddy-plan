@@ -8,7 +8,14 @@ export const Header = () => {
       <div className="flex items-center justify-between h-16 px-4 md:px-6 md:ml-60">
         {/* Mobile logo */}
         <div className="md:hidden">
-          <h1 className="font-script text-2xl text-primary">Plan My Outings</h1>
+          <h1 className="font-script text-2xl drop-shadow-sm" style={{ 
+            background: 'var(--gradient-brand)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            Plan My Outings
+          </h1>
         </div>
 
         {/* Search bar - hidden on mobile, visible on tablet+ */}

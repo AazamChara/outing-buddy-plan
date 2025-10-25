@@ -42,7 +42,14 @@ export const DesktopNav = () => {
   return (
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-60 bg-background border-r border-border flex-col z-40">
       <div className="p-6">
-        <h2 className="font-script text-3xl text-primary mb-1">Plan My Outings</h2>
+        <h2 className="font-script text-3xl mb-1 drop-shadow-sm" style={{ 
+          background: 'var(--gradient-brand)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text'
+        }}>
+          Plan My Outings
+        </h2>
         <p className="text-sm text-muted-foreground">Decide together, faster.</p>
       </div>
       
