@@ -346,7 +346,7 @@ const GroupDetail = () => {
 
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="text-left w-full group"
+            className="text-left w-full group mb-4"
           >
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-primary group-hover:text-[hsl(var(--teal))] transition-colors">
@@ -354,7 +354,6 @@ const GroupDetail = () => {
               </h1>
               <Settings className="h-5 w-5 text-muted-foreground group-hover:text-[hsl(var(--teal))] transition-colors" />
             </div>
-            <p className="text-sm text-muted-foreground">Decide together, faster.</p>
           </button>
 
           {/* Search Bar */}
