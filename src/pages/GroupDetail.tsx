@@ -338,6 +338,7 @@ const GroupDetail = () => {
               variant="outline"
               size="sm"
               className="h-9"
+              onClick={() => navigate(`/group/${id}/chat`)}
             >
               <MessageCircle className="h-4 w-4 mr-2" />
               Chat

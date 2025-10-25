@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Account from "./pages/Account";
 import Activities from "./pages/Activities";
 import GroupDetail from "./pages/GroupDetail";
+import GroupChat from "./pages/GroupChat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,7 +29,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/activities" element={<Activities />} />
-                <Route path="/group/:id" element={<GroupDetail />} />
+            <Route path="/group/:id" element={<GroupDetail />} />
+            <Route path="/group/:id/chat" element={<GroupChat />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
