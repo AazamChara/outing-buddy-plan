@@ -68,21 +68,6 @@ const Index = () => {
           )}
         </section>
 
-        {/* Quick Actions */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--mint))] to-[hsl(var(--mint-dark))] text-foreground">
-            <h3 className="text-lg font-semibold mb-2">🗳️ Create Polls</h3>
-            <p className="text-sm opacity-90">Let everyone vote on the next adventure</p>
-          </div>
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--peach))] to-[hsl(var(--peach-dark))] text-foreground">
-            <h3 className="text-lg font-semibold mb-2">📍 Discover Places</h3>
-            <p className="text-sm opacity-90">Find nearby cafés, restaurants & events</p>
-          </div>
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--lavender))] to-[hsl(var(--lavender-dark))] text-foreground">
-            <h3 className="text-lg font-semibold mb-2">💬 Group Chat</h3>
-            <p className="text-sm opacity-90">Coordinate with your friends in real-time</p>
-          </div>
-        </section>
       </div>
 
       {/* Floating Action Button */}
