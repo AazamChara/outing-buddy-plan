@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { GroupCard } from "@/components/GroupCard";
 import groupPlaceholder from "@/assets/group-placeholder.jpg";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { PermissionsDialog } from "@/components/PermissionsDialog";
 import { ContactSelector } from "@/components/ContactSelector";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Group {
   id: number;
@@ -54,6 +56,7 @@ const Index = () => {
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
+  const isMobile = useIsMobile();
 
   const handleCreateGroup = () => {
     const newGroup: Group = {
@@ -140,88 +143,172 @@ const Index = () => {
         <Plus className="h-6 w-6" />
       </Button>
 
-      {/* Create Group Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">Create Your Group</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Group Photo */}
-            <div className="space-y-2">
-              <Label>Group Photo</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                  id="photo-upload"
+      {/* Create Group Dialog/Sheet */}
+      {isMobile ? (
+        <Sheet open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <SheetContent side="bottom" className="h-[90vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="text-center text-xl">Create Your Group</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-4 py-4 pb-8">
+              {/* Group Photo */}
+              <div className="space-y-2">
+                <Label>Group Photo</Label>
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    id="photo-upload-mobile"
+                  />
+                  <label htmlFor="photo-upload-mobile" className="cursor-pointer">
+                    <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">
+                      {groupPhoto ? groupPhoto.name : "Tap to upload"}
+                    </p>
+                  </label>
+                </div>
+              </div>
+
+              {/* Group Name */}
+              <div className="space-y-2">
+                <Label htmlFor="group-name-mobile">Group Name</Label>
+                <Input
+                  id="group-name-mobile"
+                  placeholder="e.g., Adventure Squad"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
                 />
-                <label htmlFor="photo-upload" className="cursor-pointer">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {groupPhoto ? groupPhoto.name : "Drag & drop or click to upload"}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description-mobile">Description (Optional)</Label>
+                <Textarea
+                  id="description-mobile"
+                  placeholder="What brings your crew together?"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {/* Add Friends from Contacts */}
+              <div className="space-y-2">
+                <Label>Add Friends</Label>
+                <ContactSelector onContactsSelected={setSelectedFriends} />
+                {selectedFriends.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedFriends.length} friend(s) selected
                   </p>
-                </label>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-background pb-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
+                  onClick={handleCreateGroup}
+                  disabled={!groupName.trim()}
+                >
+                  Create Group
+                </Button>
               </div>
             </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl">Create Your Group</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Group Photo */}
+              <div className="space-y-2">
+                <Label>Group Photo</Label>
+                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                  <label htmlFor="photo-upload" className="cursor-pointer">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      {groupPhoto ? groupPhoto.name : "Drag & drop or click to upload"}
+                    </p>
+                  </label>
+                </div>
+              </div>
 
-            {/* Group Name */}
-            <div className="space-y-2">
-              <Label htmlFor="group-name">Group Name</Label>
-              <Input
-                id="group-name"
-                placeholder="e.g., Adventure Squad"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
-            </div>
+              {/* Group Name */}
+              <div className="space-y-2">
+                <Label htmlFor="group-name">Group Name</Label>
+                <Input
+                  id="group-name"
+                  placeholder="e.g., Adventure Squad"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                />
+              </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                placeholder="What brings your crew together?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="resize-none"
-                rows={3}
-              />
-            </div>
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="What brings your crew together?"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="resize-none"
+                  rows={3}
+                />
+              </div>
 
-            {/* Add Friends from Contacts */}
-            <div className="space-y-2">
-              <Label>Add Friends</Label>
-              <ContactSelector onContactsSelected={setSelectedFriends} />
-              {selectedFriends.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedFriends.length} friend(s) selected
-                </p>
-              )}
-            </div>
+              {/* Add Friends from Contacts */}
+              <div className="space-y-2">
+                <Label>Add Friends</Label>
+                <ContactSelector onContactsSelected={setSelectedFriends} />
+                {selectedFriends.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedFriends.length} friend(s) selected
+                  </p>
+                )}
+              </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setIsCreateDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
-                onClick={handleCreateGroup}
-                disabled={!groupName.trim()}
-              >
-                Create Group
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
+                  onClick={handleCreateGroup}
+                  disabled={!groupName.trim()}
+                >
+                  Create Group
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
