@@ -34,7 +34,7 @@ export const GroupCard = ({
       style={{ borderRadius: "20px" }}
     >
       {/* Background Image */}
-      <div className="relative h-32 overflow-hidden">
+      <div className="relative h-24 overflow-hidden">
         <img
           src={imageUrl}
           alt={name}
@@ -44,13 +44,13 @@ export const GroupCard = ({
       </div>
 
       {/* Content */}
-      <div className="p-5">
-        <h3 className="text-xl font-bold text-primary mb-2 group-hover:text-[hsl(var(--teal-light))] transition-colors">
+      <div className="p-4">
+        <h3 className="text-lg font-bold text-primary mb-1.5 group-hover:text-[hsl(var(--teal-light))] transition-colors">
           {name}
         </h3>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
           <span className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
+            <Users className="h-3 w-3" />
             {memberCount} members
           </span>
           <span className="text-xs">•</span>
@@ -59,10 +59,10 @@ export const GroupCard = ({
 
         {/* Notification Bell */}
         {hasNotifications && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1.5 text-xs">
             <div className="relative inline-flex">
-              <Bell className="h-4 w-4 text-accent-foreground animate-bounce-in" />
-              <span className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full animate-pulse" />
+              <Bell className="h-3 w-3 text-accent-foreground animate-bounce-in" />
+              <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 bg-destructive rounded-full animate-pulse" />
             </div>
             <span className="text-accent-foreground font-medium">New activity!</span>
           </div>
