@@ -433,7 +433,12 @@ const GroupDetail = () => {
                         `}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm">{option.text}</span>
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="font-medium text-sm">{option.text}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({option.votes} {option.votes === 1 ? 'vote' : 'votes'})
+                            </span>
+                          </div>
                           <div className="flex items-center gap-2">
                             {option.voted && (
                               <span className="text-xs text-[hsl(var(--teal))] font-semibold">✓</span>
