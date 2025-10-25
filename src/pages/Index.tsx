@@ -8,7 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 
-const mockGroups = [
+interface Group {
+  id: number;
+  name: string;
+  memberCount: number;
+  lastActivity: string;
+  imageUrl: string;
+  hasNotifications: boolean;
+}
+
+const initialGroups: Group[] = [
   {
     id: 1,
     name: "Adventure Squad",
@@ -36,26 +45,46 @@ const mockGroups = [
 ];
 
 const Index = () => {
+  const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
+  const [groupPhotoPreview, setGroupPhotoPreview] = useState<string | null>(null);
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [inviteMembers, setInviteMembers] = useState("");
 
   const handleCreateGroup = () => {
-    // TODO: Implement group creation logic
-    console.log("Creating group:", { groupName, description, inviteMembers, groupPhoto });
+    const newGroup: Group = {
+      id: groups.length + 1,
+      name: groupName,
+      memberCount: 1,
+      lastActivity: description || "Just created",
+      imageUrl: groupPhotoPreview || groupPlaceholder,
+      hasNotifications: false,
+    };
+
+    setGroups([newGroup, ...groups]);
     setIsCreateDialogOpen(false);
+    
     // Reset form
     setGroupName("");
     setDescription("");
     setInviteMembers("");
     setGroupPhoto(null);
+    setGroupPhotoPreview(null);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setGroupPhoto(e.target.files[0]);
+      const file = e.target.files[0];
+      setGroupPhoto(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setGroupPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -73,7 +102,7 @@ const Index = () => {
 
           {/* Groups Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {mockGroups.map((group, index) => (
+            {groups.map((group, index) => (
               <div key={group.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                 <GroupCard {...group} />
               </div>
@@ -81,7 +110,7 @@ const Index = () => {
           </div>
 
           {/* Empty State / CTA */}
-          {mockGroups.length === 0 && (
+          {groups.length === 0 && (
             <div className="text-center py-16 animate-fade-in">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary mb-6">
                 <Plus className="h-10 w-10 text-muted-foreground" />
