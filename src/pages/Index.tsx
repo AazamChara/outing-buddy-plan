@@ -1,7 +1,12 @@
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GroupCard } from "@/components/GroupCard";
 import groupPlaceholder from "@/assets/group-placeholder.jpg";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 const mockGroups = [
   {
@@ -31,6 +36,29 @@ const mockGroups = [
 ];
 
 const Index = () => {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
+  const [groupName, setGroupName] = useState("");
+  const [description, setDescription] = useState("");
+  const [inviteMembers, setInviteMembers] = useState("");
+
+  const handleCreateGroup = () => {
+    // TODO: Implement group creation logic
+    console.log("Creating group:", { groupName, description, inviteMembers, groupPhoto });
+    setIsCreateDialogOpen(false);
+    // Reset form
+    setGroupName("");
+    setDescription("");
+    setInviteMembers("");
+    setGroupPhoto(null);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setGroupPhoto(e.target.files[0]);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-20 md:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -75,9 +103,93 @@ const Index = () => {
         variant="fab"
         size="icon"
         className="fixed bottom-24 md:bottom-8 right-6 h-14 w-14 shadow-[var(--shadow-card)] animate-float z-40"
+        onClick={() => setIsCreateDialogOpen(true)}
       >
         <Plus className="h-6 w-6" />
       </Button>
+
+      {/* Create Group Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Create Your Group</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Group Photo */}
+            <div className="space-y-2">
+              <Label>Group Photo</Label>
+              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  id="photo-upload"
+                />
+                <label htmlFor="photo-upload" className="cursor-pointer">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {groupPhoto ? groupPhoto.name : "Drag & drop or click to upload"}
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            {/* Group Name */}
+            <div className="space-y-2">
+              <Label htmlFor="group-name">Group Name</Label>
+              <Input
+                id="group-name"
+                placeholder="e.g., Adventure Squad"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                placeholder="What brings your crew together?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+
+            {/* Invite Members */}
+            <div className="space-y-2">
+              <Label htmlFor="invite-members">Invite Members</Label>
+              <Input
+                id="invite-members"
+                placeholder="Enter emails or phone numbers"
+                value={inviteMembers}
+                onChange={(e) => setInviteMembers(e.target.value)}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
+                onClick={handleCreateGroup}
+                disabled={!groupName.trim()}
+              >
+                Create Group
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
