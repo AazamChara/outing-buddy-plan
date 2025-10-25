@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { GroupSettings } from "@/components/GroupSettings";
+import { toast } from "sonner";
 
 interface PollOption {
   id: number;
@@ -49,6 +51,13 @@ const mockPolls: Poll[] = [
   },
 ];
 
+interface Member {
+  id: string;
+  name: string;
+  phone: string;
+  avatar?: string;
+}
+
 const GroupDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -56,6 +65,7 @@ const GroupDetail = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [polls, setPolls] = useState<Poll[]>(mockPolls);
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [pollTitle, setPollTitle] = useState("");
   const [pollOptions, setPollOptions] = useState<string[]>(["", "", ""]);
   const [eventDate, setEventDate] = useState<Date>();
@@ -63,7 +73,13 @@ const GroupDetail = () => {
   const [location, setLocation] = useState("");
   const [anonymousVoting, setAnonymousVoting] = useState(false);
 
-  const groupName = "Adventure Squad";
+  const [groupName, setGroupName] = useState("Adventure Squad");
+  const [groupPhoto, setGroupPhoto] = useState<string>();
+  const [members, setMembers] = useState<Member[]>([
+    { id: "1", name: "John Doe", phone: "+1 234 567 8900" },
+    { id: "2", name: "Jane Smith", phone: "+1 234 567 8901" },
+    { id: "3", name: "Mike Johnson", phone: "+1 234 567 8902" },
+  ]);
 
   const handleVote = (pollId: number, optionId: number) => {
     setPolls(polls.map(poll => {
@@ -119,6 +135,39 @@ const GroupDetail = () => {
 
   const addPollOption = () => {
     setPollOptions([...pollOptions, ""]);
+  };
+
+  const handleUpdateGroupName = (name: string) => {
+    setGroupName(name);
+    toast.success("Group name updated");
+  };
+
+  const handleUpdateGroupPhoto = (photo: string | null) => {
+    setGroupPhoto(photo || undefined);
+    toast.success(photo ? "Group photo updated" : "Group photo removed");
+  };
+
+  const handleAddMembers = (newMembers: string[]) => {
+    const contacts = JSON.parse(localStorage.getItem("syncedContacts") || "[]");
+    const membersToAdd = contacts
+      .filter((c: any) => newMembers.includes(c.phone))
+      .map((c: any) => ({
+        id: Math.random().toString(),
+        name: c.name,
+        phone: c.phone,
+      }));
+    setMembers([...members, ...membersToAdd]);
+    toast.success(`${membersToAdd.length} member(s) added`);
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    setMembers(members.filter((m) => m.id !== memberId));
+    toast.success("Member removed");
+  };
+
+  const handleExitGroup = () => {
+    toast.success("You've left the group");
+    setTimeout(() => navigate("/"), 1000);
   };
 
   const CreatePollForm = () => (
@@ -260,8 +309,18 @@ const GroupDetail = () => {
             </Button>
           </div>
 
-          <h1 className="text-2xl font-bold text-primary mb-1">{groupName}</h1>
-          <p className="text-sm text-muted-foreground mb-4">Decide together, faster.</p>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="text-left w-full group"
+          >
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-primary group-hover:text-[hsl(var(--teal))] transition-colors">
+                {groupName}
+              </h1>
+              <Settings className="h-5 w-5 text-muted-foreground group-hover:text-[hsl(var(--teal))] transition-colors" />
+            </div>
+            <p className="text-sm text-muted-foreground">Decide together, faster.</p>
+          </button>
 
           {/* Search Bar */}
           <div className="relative">
@@ -391,13 +450,52 @@ const GroupDetail = () => {
         </Sheet>
       ) : (
         <Dialog open={isCreatePollOpen} onOpenChange={setIsCreatePollOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Poll</DialogTitle>
             </DialogHeader>
             <CreatePollForm />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Group Settings Dialog/Sheet */}
+      {isMobile ? (
+        <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <SheetContent side="bottom" className="h-[90vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="text-center">Group Settings</SheetTitle>
+            </SheetHeader>
+            <GroupSettings
+              groupName={groupName}
+              groupPhoto={groupPhoto}
+              members={members}
+              onUpdateGroupName={handleUpdateGroupName}
+              onUpdateGroupPhoto={handleUpdateGroupPhoto}
+              onAddMembers={handleAddMembers}
+              onRemoveMember={handleRemoveMember}
+              onExitGroup={handleExitGroup}
+            />
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <SheetContent side="right" className="w-[400px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Group Settings</SheetTitle>
+            </SheetHeader>
+            <GroupSettings
+              groupName={groupName}
+              groupPhoto={groupPhoto}
+              members={members}
+              onUpdateGroupName={handleUpdateGroupName}
+              onUpdateGroupPhoto={handleUpdateGroupPhoto}
+              onAddMembers={handleAddMembers}
+              onRemoveMember={handleRemoveMember}
+              onExitGroup={handleExitGroup}
+            />
+          </SheetContent>
+        </Sheet>
       )}
     </div>
   );
