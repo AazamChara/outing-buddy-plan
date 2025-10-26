@@ -130,18 +130,22 @@ const Activities = () => {
           </div>
         )}
 
-        {/* Activities Grid */}
+        {/* Activities Sections */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-56 w-full" />
-                <CardContent className="p-4 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            <div className="flex gap-4 overflow-hidden">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex-none w-[280px]">
+                  <Card className="overflow-hidden">
+                    <Skeleton className="h-56 w-full" />
+                    <CardContent className="p-4 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
           </div>
         ) : filteredActivities.length === 0 ? (
           <div className="text-center py-12">
@@ -150,10 +154,10 @@ const Activities = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-8">
             {/* Featured Card - Larger first item for Movies */}
             {activeFilter === "Movies" && filteredActivities[0] && (
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow animate-fade-in">
                 <div className="relative h-80 bg-muted">
                   <img
                     src={filteredActivities[0].image || "/placeholder.svg"}
@@ -175,63 +179,90 @@ const Activities = () => {
               </Card>
             )}
 
-            {/* Regular Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(activeFilter === "Movies" ? filteredActivities.slice(1) : filteredActivities).map((activity) => (
-                <Card key={activity.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="relative">
-                    <div className="h-48 bg-muted">
-                      <img
-                        src={activity.image || "/placeholder.svg"}
-                        alt={activity.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    {activity.price && activity.price.includes("OFF") && (
-                      <div className="absolute top-0 left-0 right-0 bg-primary px-3 py-1">
-                        <p className="text-white text-xs font-medium flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-white" />
-                          {activity.price}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <CardContent className="p-4 space-y-2">
-                    <div>
-                      <h3 className="font-semibold text-lg line-clamp-1">{activity.title}</h3>
-                      {activity.rating && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-medium">
-                            {activity.rating} ★
-                          </span>
-                          {activity.venue && (
-                            <span className="text-sm text-muted-foreground line-clamp-1">
-                              {activity.venue}
-                            </span>
+            {/* Horizontal Scrollable Sections */}
+            <div className="space-y-8">
+              {/* Main Horizontal Scroll */}
+              <div className="relative">
+                <div 
+                  className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide scroll-smooth"
+                  style={{ 
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  }}
+                >
+                  {(activeFilter === "Movies" ? filteredActivities.slice(1) : filteredActivities).map((activity, index) => (
+                    <div 
+                      key={activity.id} 
+                      className="flex-none w-[280px] snap-start animate-fade-in hover-scale"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <Card className="overflow-hidden h-full hover:shadow-lg transition-all">
+                        <div className="relative">
+                          <div className="h-56 bg-muted">
+                            <img
+                              src={activity.image || "/placeholder.svg"}
+                              alt={activity.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          {activity.price && activity.price.includes("OFF") && (
+                            <div className="absolute top-0 left-0 right-0 bg-primary px-3 py-1.5">
+                              <p className="text-white text-xs font-medium flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-white" />
+                                {activity.price}
+                              </p>
+                            </div>
                           )}
                         </div>
-                      )}
-                      {!activity.rating && activity.venue && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {activity.venue}
-                        </p>
-                      )}
+                        <CardContent className="p-4 space-y-2">
+                          <div>
+                            <h3 className="font-semibold text-base line-clamp-1">{activity.title}</h3>
+                            {activity.rating && (
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-medium">
+                                  {activity.rating} ★
+                                </span>
+                                {activity.venue && (
+                                  <span className="text-xs text-muted-foreground line-clamp-1">
+                                    {activity.venue}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {!activity.rating && activity.venue && (
+                              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-1">
+                                {activity.venue}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {activity.date && (
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(activity.date).toLocaleDateString('en-US', { 
+                                weekday: 'short', 
+                                day: 'numeric', 
+                                month: 'short'
+                              })}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
-                    
-                    {activity.date && (
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.date).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          day: 'numeric', 
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                  ))}
+                </div>
+                
+                {/* Scroll indicator dots */}
+                {filteredActivities.length > 3 && (
+                  <div className="flex justify-center gap-1 mt-2">
+                    {Array.from({ length: Math.ceil(filteredActivities.length / 3) }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
