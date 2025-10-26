@@ -277,8 +277,15 @@ const GroupDetail = () => {
     toast.success("Poll deleted");
   };
 
-  const handleReplyInChat = (pollTitle: string) => {
-    localStorage.setItem('chat_reply_poll', pollTitle);
+  const handleReplyInChat = (poll: Poll) => {
+    const votedOption = poll.options.find(opt => opt.voted);
+    const replyData = {
+      pollTitle: poll.title,
+      votedOption: votedOption?.text || "No vote yet",
+      pollId: poll.id,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('chat_reply_poll', JSON.stringify(replyData));
     navigate(`/group/${id}/chat`);
   };
 
@@ -378,7 +385,7 @@ const GroupDetail = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleReplyInChat(poll.title)}>
+                  <DropdownMenuItem onClick={() => handleReplyInChat(poll)}>
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Reply in chat
                   </DropdownMenuItem>

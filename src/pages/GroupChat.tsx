@@ -1,4 +1,4 @@
-import { ArrowLeft, Send, Smile, Paperclip, Video, Phone, Image, MapPin, User, Camera } from "lucide-react";
+import { ArrowLeft, Send, Smile, Paperclip, Video, Phone, Image, MapPin, User, Camera, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,7 +15,7 @@ interface Message {
   sender: string;
   timestamp: Date;
   isOwn: boolean;
-  type?: "text" | "image" | "video" | "location" | "contact" | "activity";
+  type?: "text" | "image" | "video" | "location" | "contact" | "activity" | "poll";
   mediaUrl?: string;
   activityData?: {
     id: string;
@@ -27,6 +27,12 @@ interface Message {
     image?: string;
     rating?: number;
   };
+  pollData?: {
+    pollTitle: string;
+    votedOption: string;
+    pollId: number;
+  };
+  pinned?: boolean;
 }
 
 const mockMessages: Message[] = [
@@ -90,6 +96,27 @@ const GroupChat = () => {
       }));
       setMessages(prev => [...prev, ...parsedMessages]);
       localStorage.removeItem(`chat_messages_${id}`); // Clear after loading
+    }
+  }, [id]);
+
+  // Load poll reply from localStorage
+  useEffect(() => {
+    const pollReply = localStorage.getItem('chat_reply_poll');
+    if (pollReply) {
+      const replyData = JSON.parse(pollReply);
+      const pollMessage: Message = {
+        id: messages.length + 1,
+        text: `Voted for: ${replyData.votedOption}`,
+        sender: "You",
+        timestamp: new Date(),
+        isOwn: true,
+        type: "poll",
+        pollData: replyData,
+        pinned: true,
+      };
+      setMessages(prev => [pollMessage, ...prev]);
+      localStorage.removeItem('chat_reply_poll');
+      toast.success("Poll reply pinned to chat");
     }
   }, [id]);
 
@@ -241,17 +268,50 @@ const GroupChat = () => {
             >
               <div
                 className={`${
-                  message.type === "activity" ? "max-w-[85%]" : "max-w-[70%]"
+                  message.type === "activity" || message.type === "poll" ? "max-w-[85%]" : "max-w-[70%]"
                 } rounded-2xl ${
                   message.isOwn
                     ? "bg-[hsl(var(--teal))] text-white rounded-br-sm"
                     : "bg-secondary text-foreground rounded-bl-sm"
-                } ${message.type === "activity" ? "" : "px-4 py-2"}`}
+                } ${message.type === "activity" || message.type === "poll" ? "" : "px-4 py-2"} ${
+                  message.pinned ? "ring-2 ring-[hsl(var(--peach))] relative" : ""
+                }`}
               >
-                {!message.isOwn && message.type !== "activity" && (
+                {message.pinned && (
+                  <div className="absolute -top-2 -right-2 bg-[hsl(var(--peach))] rounded-full p-1">
+                    <Pin className="h-3 w-3 text-white" />
+                  </div>
+                )}
+                
+                {!message.isOwn && message.type !== "activity" && message.type !== "poll" && (
                   <p className="text-xs font-semibold mb-1 text-[hsl(var(--teal))]">
                     {message.sender}
                   </p>
+                )}
+
+                {/* Poll Reply Card */}
+                {message.type === "poll" && message.pollData && (
+                  <div className="p-4 bg-gradient-to-br from-[hsl(var(--teal))]/10 to-[hsl(var(--peach))]/10">
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="text-2xl">📊</span>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold mb-1 text-[hsl(var(--teal))]">
+                          Poll Reply
+                        </p>
+                        <h4 className="font-bold text-base mb-2">
+                          {message.pollData.pollTitle}
+                        </h4>
+                        <div className="bg-white/50 dark:bg-black/20 rounded-lg p-2 mb-2">
+                          <p className="text-sm font-medium">
+                            ✓ {message.pollData.votedOption}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatTime(message.timestamp)}
+                    </p>
+                  </div>
                 )}
                 
                 {/* Activity Card */}
@@ -314,7 +374,7 @@ const GroupChat = () => {
                 )}
                 
                 {/* Text/Other Messages */}
-                {message.type !== "activity" && (
+                {message.type !== "activity" && message.type !== "poll" && (
                   <>
                     <p className="text-sm break-words">{message.text}</p>
                     <p
