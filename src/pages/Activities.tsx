@@ -24,11 +24,30 @@ const Activities = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>("All");
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Get user's location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('Location access denied, using default location');
+          // Continue with default location if denied
+        }
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     fetchActivities();
-  }, [activeFilter]);
+  }, [activeFilter, userLocation]);
 
   const fetchActivities = async () => {
     setLoading(true);
@@ -36,8 +55,8 @@ const Activities = () => {
       const { data, error } = await supabase.functions.invoke('fetch-places', {
         body: {
           type: activeFilter === "All" ? null : activeFilter,
-          latitude: null,
-          longitude: null,
+          latitude: userLocation?.latitude || null,
+          longitude: userLocation?.longitude || null,
         },
       });
 
