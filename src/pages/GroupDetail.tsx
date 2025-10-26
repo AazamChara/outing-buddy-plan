@@ -75,6 +75,7 @@ const GroupDetail = () => {
   const [eventTime, setEventTime] = useState("");
   const [location, setLocation] = useState("");
   const [anonymousVoting, setAnonymousVoting] = useState(false);
+  const [showReactions, setShowReactions] = useState<Record<string, boolean>>({});
 
   // Load shared polls from localStorage
   useEffect(() => {
@@ -85,6 +86,11 @@ const GroupDetail = () => {
       localStorage.removeItem(`group_polls_${id}`); // Clear after loading
     }
   }, [id]);
+
+  const toggleReactions = (pollId: number, optionId: number) => {
+    const key = `${pollId}-${optionId}`;
+    setShowReactions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const [groupName, setGroupName] = useState("Adventure Squad");
   const [groupPhoto, setGroupPhoto] = useState<string>();
@@ -428,7 +434,8 @@ const GroupDetail = () => {
                   const percentage = poll.totalVotes > 0 
                     ? (option.votes / poll.totalVotes) * 100 
                     : 0;
-                  const [showReactions, setShowReactions] = useState(false);
+                  const reactionKey = `${poll.id}-${option.id}`;
+                  const isReactionOpen = showReactions[reactionKey] || false;
                   
                   return (
                     <div key={option.id} className="space-y-2">
@@ -456,7 +463,7 @@ const GroupDetail = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setShowReactions(!showReactions);
+                                toggleReactions(poll.id, option.id);
                               }}
                               className="text-lg hover:scale-125 transition-transform"
                             >
@@ -490,14 +497,14 @@ const GroupDetail = () => {
                       </button>
 
                       {/* Reaction Picker */}
-                      {showReactions && (
+                      {isReactionOpen && (
                         <div className="flex gap-2 px-3 py-2 bg-card border border-border rounded-lg animate-fade-in">
                           {availableReactions.map((emoji) => (
                             <button
                               key={emoji}
                               onClick={() => {
                                 handleReaction(poll.id, option.id, emoji);
-                                setShowReactions(false);
+                                toggleReactions(poll.id, option.id);
                               }}
                               className="text-2xl hover:scale-150 transition-transform active:scale-125"
                             >
