@@ -126,9 +126,19 @@ const Index = () => {
           photo_url: photoUrl,
         }])
         .select()
-        .single();
+        .maybeSingle();
 
-      if (groupError) throw groupError;
+      console.log("Group creation result:", { newGroup, groupError });
+
+      if (groupError) {
+        console.error("Group creation error:", groupError);
+        toast({
+          title: "Error",
+          description: `Failed to create group: ${groupError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({
         title: "Success!",
