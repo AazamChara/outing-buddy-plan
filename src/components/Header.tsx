@@ -1,10 +1,12 @@
-import { Search, Bell, Users, Vote, UserPlus } from "lucide-react";
+import { Search, Bell, Users, Vote, UserPlus, Check, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ScrollArea } from "./ui/scroll-area";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Notification {
   id: number;
@@ -13,9 +15,18 @@ interface Notification {
   message: string;
   timestamp: Date;
   read: boolean;
+  groupId?: number;
+  pollId?: number;
+  groupData?: {
+    id: number;
+    name: string;
+    memberCount: number;
+    imageUrl: string;
+  };
 }
 
 export const Header = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([
     {
@@ -25,6 +36,8 @@ export const Header = () => {
       message: "John created a new poll in Adventure Squad",
       timestamp: new Date(2025, 9, 25, 14, 30),
       read: false,
+      groupId: 1,
+      pollId: 1,
     },
     {
       id: 2,
@@ -33,6 +46,12 @@ export const Header = () => {
       message: "Jane invited you to join Foodie Friends",
       timestamp: new Date(2025, 9, 25, 10, 15),
       read: false,
+      groupData: {
+        id: 10,
+        name: "Foodie Friends",
+        memberCount: 8,
+        imageUrl: "/placeholder.svg",
+      },
     },
     {
       id: 3,
@@ -54,6 +73,50 @@ export const Header = () => {
 
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleAcceptInvite = (notification: Notification) => {
+    if (notification.groupData) {
+      // Add group to user's groups
+      const savedGroups = localStorage.getItem('groups');
+      const groups = savedGroups ? JSON.parse(savedGroups) : [];
+      
+      groups.push({
+        ...notification.groupData,
+        lastActivity: "Just joined",
+        hasNotifications: false,
+      });
+      
+      localStorage.setItem('groups', JSON.stringify(groups));
+      
+      // Remove notification
+      setNotifications(notifications.filter(n => n.id !== notification.id));
+      
+      toast.success(`You've joined ${notification.groupData.name}!`);
+      setOpen(false);
+      navigate('/');
+    }
+  };
+
+  const handleDeclineInvite = (notification: Notification) => {
+    setNotifications(notifications.filter(n => n.id !== notification.id));
+    toast.success("Group invite declined");
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    if (notification.type === "poll" && notification.groupId) {
+      // Store poll ID to scroll to it
+      if (notification.pollId) {
+        localStorage.setItem('scroll_to_poll', notification.pollId.toString());
+      }
+      navigate(`/group/${notification.groupId}`);
+      setOpen(false);
+    } else if (notification.type === "group" && notification.groupId) {
+      navigate(`/group/${notification.groupId}`);
+      setOpen(false);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -146,36 +209,69 @@ export const Header = () => {
                 ) : (
                   <div className="divide-y divide-border">
                     {notifications.map((notification) => (
-                      <button
+                      <div
                         key={notification.id}
-                        onClick={() => markAsRead(notification.id)}
                         className={cn(
-                          "w-full p-4 text-left hover:bg-secondary/50 transition-colors",
+                          "p-4 transition-colors",
                           !notification.read && "bg-secondary/30"
                         )}
                       >
-                        <div className="flex gap-3">
-                          <div className="flex-shrink-0 mt-1">
-                            {getNotificationIcon(notification.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="font-semibold text-sm text-foreground">
-                                {notification.title}
-                              </p>
-                              {!notification.read && (
-                                <span className="flex-shrink-0 h-2 w-2 bg-[hsl(var(--teal))] rounded-full mt-1" />
-                              )}
+                        <button
+                          onClick={() => handleNotificationClick(notification)}
+                          className="w-full text-left hover:bg-secondary/50 transition-colors -m-4 p-4"
+                        >
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 mt-1">
+                              {getNotificationIcon(notification.type)}
                             </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatTimestamp(notification.timestamp)}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="font-semibold text-sm text-foreground">
+                                  {notification.title}
+                                </p>
+                                {!notification.read && (
+                                  <span className="flex-shrink-0 h-2 w-2 bg-[hsl(var(--teal))] rounded-full mt-1" />
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-1">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatTimestamp(notification.timestamp)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </button>
+                        </button>
+                        
+                        {/* Accept/Decline buttons for invites */}
+                        {notification.type === "invite" && (
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAcceptInvite(notification);
+                              }}
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeclineInvite(notification);
+                              }}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Decline
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

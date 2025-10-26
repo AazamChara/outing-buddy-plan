@@ -93,6 +93,29 @@ const Index = () => {
     };
 
     setGroups([newGroup, ...groups]);
+    
+    // Create a default poll for the new group
+    const defaultPoll = {
+      id: 1,
+      title: "When should we meet?",
+      eventDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+      eventTime: "18:00",
+      location: "",
+      options: [
+        { id: 1, text: "This Weekend", votes: 0 },
+        { id: 2, text: "Next Weekend", votes: 0 },
+        { id: 3, text: "Weekday Evening", votes: 0 },
+      ],
+      totalVotes: 0,
+      anonymousVoting: false,
+    };
+    
+    // Store the default poll for the new group
+    const existingPolls = localStorage.getItem(`group_polls_${newGroup.id}`);
+    const polls = existingPolls ? JSON.parse(existingPolls) : [];
+    polls.push(defaultPoll);
+    localStorage.setItem(`group_polls_${newGroup.id}`, JSON.stringify(polls));
+    
     setIsCreateDialogOpen(false);
     
     // Reset form

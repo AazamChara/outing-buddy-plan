@@ -107,6 +107,22 @@ const GroupDetail = () => {
     }
   }, [id]);
 
+  // Scroll to specific poll if needed
+  useEffect(() => {
+    const scrollToPollId = localStorage.getItem('scroll_to_poll');
+    if (scrollToPollId) {
+      setTimeout(() => {
+        const element = document.getElementById(`poll-${scrollToPollId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('animate-pulse');
+          setTimeout(() => element.classList.remove('animate-pulse'), 2000);
+        }
+        localStorage.removeItem('scroll_to_poll');
+      }, 300);
+    }
+  }, []);
+
   const toggleReactions = (pollId: number, optionId: number) => {
     const key = `${pollId}-${optionId}`;
     setShowReactions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -435,6 +451,7 @@ const GroupDetail = () => {
           {polls.map((poll) => (
             <Card
               key={poll.id}
+              id={`poll-${poll.id}`}
               className="p-5 border-border/50 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="mb-4">
