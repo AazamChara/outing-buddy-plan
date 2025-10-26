@@ -23,6 +23,7 @@ interface PollOption {
   text: string;
   votes: number;
   voted?: boolean;
+  voters?: string[]; // Member IDs who voted for this option
   reactions?: { emoji: string; count: number }[];
 }
 
@@ -47,9 +48,9 @@ const mockPolls: Poll[] = [
     eventTime: "14:00",
     location: "Central Park, NYC",
     options: [
-      { id: 1, text: "Café Crawl", votes: 3, reactions: [{ emoji: "☕", count: 2 }, { emoji: "😋", count: 1 }] },
-      { id: 2, text: "Hiking", votes: 4, voted: true, reactions: [{ emoji: "🏔️", count: 3 }, { emoji: "💪", count: 2 }] },
-      { id: 3, text: "Movie Marathon", votes: 2, reactions: [{ emoji: "🍿", count: 1 }] },
+      { id: 1, text: "Café Crawl", votes: 3, voters: ["1", "2", "3"], reactions: [{ emoji: "☕", count: 2 }, { emoji: "😋", count: 1 }] },
+      { id: 2, text: "Hiking", votes: 4, voters: ["1", "2", "3"], voted: true, reactions: [{ emoji: "🏔️", count: 3 }, { emoji: "💪", count: 2 }] },
+      { id: 3, text: "Movie Marathon", votes: 2, voters: ["1", "3"], reactions: [{ emoji: "🍿", count: 1 }] },
     ],
     totalVotes: 9,
     anonymousVoting: false,
@@ -131,16 +132,34 @@ const GroupDetail = () => {
   };
 
   const handleVote = (pollId: number, optionId: number) => {
+    const currentUserId = "1"; // Mock current user - in real app this would come from auth
+    
     setPolls(polls.map(poll => {
       if (poll.id === pollId) {
         return {
           ...poll,
-          options: poll.options.map(opt => ({
-            ...opt,
-            voted: opt.id === optionId,
-            votes: opt.id === optionId ? opt.votes + 1 : opt.votes - (opt.voted ? 1 : 0),
-          })),
-          totalVotes: poll.totalVotes + 1,
+          options: poll.options.map(opt => {
+            // Remove current user from all options first
+            const cleanedVoters = (opt.voters || []).filter(v => v !== currentUserId);
+            
+            // If this is the option being voted for, add current user
+            if (opt.id === optionId) {
+              return {
+                ...opt,
+                voted: true,
+                votes: opt.voted ? opt.votes : opt.votes + 1,
+                voters: [...cleanedVoters, currentUserId],
+              };
+            } else {
+              return {
+                ...opt,
+                voted: false,
+                votes: opt.voted ? opt.votes - 1 : opt.votes,
+                voters: cleanedVoters,
+              };
+            }
+          }),
+          totalVotes: poll.options.find(opt => opt.voted) ? poll.totalVotes : poll.totalVotes + 1,
         };
       }
       return poll;
@@ -193,6 +212,8 @@ const GroupDetail = () => {
         id: idx + 1,
         text,
         votes: 0,
+        voters: [],
+        reactions: [],
       })),
       totalVotes: 0,
       anonymousVoting,
@@ -399,48 +420,72 @@ const GroupDetail = () => {
                                 e.stopPropagation();
                                 toggleReactions(poll.id, option.id);
                               }}
-                              className="text-lg hover:scale-125 transition-transform"
+                              className="text-2xl hover:scale-125 transition-transform hover:rotate-12"
                             >
-                              😊
+                              🎉
                             </button>
                           </div>
                         </div>
+                        
                         {poll.totalVotes > 0 && (
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
                             <div 
-                              className="h-full bg-[hsl(var(--teal))] transition-all duration-300"
+                              className="h-full bg-gradient-to-r from-[hsl(var(--teal))] to-[hsl(var(--peach))] transition-all duration-300"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
                         )}
                         
-                        {/* Existing Reactions Display */}
+                        {/* Voters Display - Show who voted for this option */}
+                        {!poll.anonymousVoting && option.voters && option.voters.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 mt-3 mb-2">
+                            <span className="text-xs text-muted-foreground">Voted by:</span>
+                            <div className="flex flex-wrap gap-2">
+                              {option.voters.map((voterId) => {
+                                const voter = members.find(m => m.id === voterId);
+                                if (!voter) return null;
+                                return (
+                                  <div
+                                    key={voterId}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-[hsl(var(--teal))]/20 to-[hsl(var(--peach))]/20 rounded-full text-xs font-medium border border-[hsl(var(--teal))]/30 animate-fade-in"
+                                  >
+                                    <span className="text-base">👤</span>
+                                    <span className="text-foreground">{voter.name}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Fun Emoji Reactions Display */}
                         {option.reactions && option.reactions.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {option.reactions.map((reaction, idx) => (
                               <span
                                 key={idx}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/50 rounded-full text-xs animate-bounce-in"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-secondary/80 to-secondary/50 rounded-full text-xs font-medium shadow-sm hover:shadow-md transition-all hover:scale-110 animate-bounce-in"
                               >
-                                <span className="text-base">{reaction.emoji}</span>
-                                <span className="text-muted-foreground">{reaction.count}</span>
+                                <span className="text-lg">{reaction.emoji}</span>
+                                <span className="text-muted-foreground font-semibold">{reaction.count}</span>
                               </span>
                             ))}
                           </div>
                         )}
                       </button>
 
-                      {/* Reaction Picker */}
+                      {/* Fun Reaction Picker with Animation */}
                       {isReactionOpen && (
-                        <div className="flex gap-2 px-3 py-2 bg-card border border-border rounded-lg animate-fade-in">
-                          {availableReactions.map((emoji) => (
+                        <div className="flex gap-2 px-4 py-3 bg-gradient-to-r from-card to-secondary/30 border-2 border-[hsl(var(--teal))]/30 rounded-xl shadow-lg animate-fade-in backdrop-blur-sm">
+                          {availableReactions.map((emoji, idx) => (
                             <button
                               key={emoji}
                               onClick={() => {
                                 handleReaction(poll.id, option.id, emoji);
                                 toggleReactions(poll.id, option.id);
                               }}
-                              className="text-2xl hover:scale-150 transition-transform active:scale-125"
+                              className="text-3xl hover:scale-150 transition-all duration-200 active:scale-125 hover:rotate-12"
+                              style={{ animationDelay: `${idx * 50}ms` }}
                             >
                               {emoji}
                             </button>
