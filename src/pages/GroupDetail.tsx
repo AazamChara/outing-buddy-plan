@@ -76,6 +76,26 @@ const GroupDetail = () => {
   const [location, setLocation] = useState("");
   const [anonymousVoting, setAnonymousVoting] = useState(false);
   const [showReactions, setShowReactions] = useState<Record<string, boolean>>({});
+  
+  const [groupName, setGroupName] = useState("Adventure Squad");
+  const [groupPhoto, setGroupPhoto] = useState<string>();
+  const [members, setMembers] = useState<Member[]>([
+    { id: "1", name: "John Doe", phone: "+1 234 567 8900" },
+    { id: "2", name: "Jane Smith", phone: "+1 234 567 8901" },
+    { id: "3", name: "Mike Johnson", phone: "+1 234 567 8902" },
+  ]);
+
+  // Load group data from localStorage
+  useEffect(() => {
+    const savedGroups = localStorage.getItem('groups');
+    if (savedGroups) {
+      const groups = JSON.parse(savedGroups);
+      const currentGroup = groups.find((g: any) => g.id === parseInt(id || '0'));
+      if (currentGroup) {
+        setGroupName(currentGroup.name);
+      }
+    }
+  }, [id]);
 
   // Load shared polls from localStorage
   useEffect(() => {
@@ -91,14 +111,6 @@ const GroupDetail = () => {
     const key = `${pollId}-${optionId}`;
     setShowReactions(prev => ({ ...prev, [key]: !prev[key] }));
   };
-
-  const [groupName, setGroupName] = useState("Adventure Squad");
-  const [groupPhoto, setGroupPhoto] = useState<string>();
-  const [members, setMembers] = useState<Member[]>([
-    { id: "1", name: "John Doe", phone: "+1 234 567 8900" },
-    { id: "2", name: "Jane Smith", phone: "+1 234 567 8901" },
-    { id: "3", name: "Mike Johnson", phone: "+1 234 567 8902" },
-  ]);
 
   const handleVote = (pollId: number, optionId: number) => {
     setPolls(polls.map(poll => {
@@ -190,6 +202,15 @@ const GroupDetail = () => {
 
   const handleUpdateGroupName = (name: string) => {
     setGroupName(name);
+    // Update in localStorage as well
+    const savedGroups = localStorage.getItem('groups');
+    if (savedGroups) {
+      const groups = JSON.parse(savedGroups);
+      const updatedGroups = groups.map((g: any) => 
+        g.id === parseInt(id || '0') ? { ...g, name } : g
+      );
+      localStorage.setItem('groups', JSON.stringify(updatedGroups));
+    }
     toast.success("Group name updated");
   };
 

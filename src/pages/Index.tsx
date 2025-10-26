@@ -12,6 +12,7 @@ import { PermissionsDialog } from "@/components/PermissionsDialog";
 import { ContactSelector } from "@/components/ContactSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 interface Group {
   id: number;
@@ -51,7 +52,10 @@ const initialGroups: Group[] = [
 
 const Index = () => {
   const navigate = useNavigate();
-  const [groups, setGroups] = useState<Group[]>(initialGroups);
+  const [groups, setGroups] = useState<Group[]>(() => {
+    const savedGroups = localStorage.getItem('groups');
+    return savedGroups ? JSON.parse(savedGroups) : initialGroups;
+  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
   const [groupPhotoPreview, setGroupPhotoPreview] = useState<string | null>(null);
@@ -59,6 +63,11 @@ const Index = () => {
   const [description, setDescription] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
   const isMobile = useIsMobile();
+
+  // Save groups to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('groups', JSON.stringify(groups));
+  }, [groups]);
 
   const handleCreateGroup = () => {
     const newGroup: Group = {
