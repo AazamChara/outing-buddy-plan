@@ -7,16 +7,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PermissionsDialog } from "@/components/PermissionsDialog";
 import { ContactSelector } from "@/components/ContactSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface Group {
-  id: string;
+  id: number;
   name: string;
   memberCount: number;
   lastActivity: string;
@@ -24,12 +23,39 @@ interface Group {
   hasNotifications: boolean;
 }
 
+const initialGroups: Group[] = [
+  {
+    id: 1,
+    name: "Adventure Squad",
+    memberCount: 5,
+    lastActivity: "Last outing: Movie Night",
+    imageUrl: groupPlaceholder,
+    hasNotifications: true,
+  },
+  {
+    id: 2,
+    name: "Foodie Friends",
+    memberCount: 8,
+    lastActivity: "Planning: Restaurant Week",
+    imageUrl: groupPlaceholder,
+    hasNotifications: false,
+  },
+  {
+    id: 3,
+    name: "Weekend Warriors",
+    memberCount: 6,
+    lastActivity: "Last outing: Hiking Trail",
+    imageUrl: groupPlaceholder,
+    hasNotifications: true,
+  },
+];
+
 const Index = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const [groups, setGroups] = useState<Group[]>(() => {
+    const savedGroups = localStorage.getItem('groups');
+    return savedGroups ? JSON.parse(savedGroups) : initialGroups;
+  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
   const [groupPhotoPreview, setGroupPhotoPreview] = useState<string | null>(null);
@@ -38,132 +64,66 @@ const Index = () => {
   const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
   const isMobile = useIsMobile();
 
-  // Check auth and fetch groups
+  // Save groups to localStorage whenever they change
   useEffect(() => {
-    checkAuth();
-  }, [navigate]);
+    localStorage.setItem('groups', JSON.stringify(groups));
+  }, [groups]);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-    fetchGroups();
-  };
-
-  const fetchGroups = async () => {
-    try {
-      setLoading(true);
-      const { data: groupsData, error } = await (supabase as any)
-        .from("groups")
-        .select(`
-          id,
-          name,
-          description,
-          photo_url,
-          created_at,
-          group_members (count)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const formattedGroups: Group[] = (groupsData || []).map((group: any) => ({
-        id: group.id,
-        name: group.name,
-        memberCount: group.group_members?.[0]?.count || 1,
-        lastActivity: group.description || "Just created",
-        imageUrl: group.photo_url || groupPlaceholder,
-        hasNotifications: false,
-      }));
-
-      setGroups(formattedGroups);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load groups",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!groupName.trim()) return;
-
-    try {
-      setCreating(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      let photoUrl = null;
-
-      // Upload photo if exists
-      if (groupPhoto) {
-        const fileExt = groupPhoto.name.split(".").pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("group-photos")
-          .upload(fileName, groupPhoto);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("group-photos")
-          .getPublicUrl(fileName);
-
-        photoUrl = publicUrl;
+  // Reload groups when returning to this page
+  useEffect(() => {
+    const handleFocus = () => {
+      const savedGroups = localStorage.getItem('groups');
+      if (savedGroups) {
+        setGroups(JSON.parse(savedGroups));
       }
+    };
 
-      // Create group (created_by is set automatically by trigger)
-      const { data: newGroup, error: groupError } = await (supabase as any)
-        .from("groups")
-        .insert([{
-          name: groupName,
-          description: description || null,
-          photo_url: photoUrl,
-        }])
-        .select()
-        .maybeSingle();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
-      console.log("Group creation result:", { newGroup, groupError });
+  const handleCreateGroup = () => {
+    const newGroup: Group = {
+      id: groups.length + 1,
+      name: groupName,
+      memberCount: 1,
+      lastActivity: description || "Just created",
+      imageUrl: groupPhotoPreview || groupPlaceholder,
+      hasNotifications: false,
+    };
 
-      if (groupError) {
-        console.error("Group creation error:", groupError);
-        toast({
-          title: "Error",
-          description: `Failed to create group: ${groupError.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Success!",
-        description: "Group created successfully",
-      });
-
-      // Refresh groups list
-      await fetchGroups();
-
-      // Reset form
-      setIsCreateDialogOpen(false);
-      setGroupName("");
-      setDescription("");
-      setSelectedFriends([]);
-      setGroupPhoto(null);
-      setGroupPhotoPreview(null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setCreating(false);
-    }
+    setGroups([newGroup, ...groups]);
+    
+    // Create a default poll for the new group
+    const defaultPoll = {
+      id: 1,
+      title: "When should we meet?",
+      eventDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+      eventTime: "18:00",
+      location: "",
+      options: [
+        { id: 1, text: "This Weekend", votes: 0 },
+        { id: 2, text: "Next Weekend", votes: 0 },
+        { id: 3, text: "Weekday Evening", votes: 0 },
+      ],
+      totalVotes: 0,
+      anonymousVoting: false,
+    };
+    
+    // Store the default poll for the new group
+    const existingPolls = localStorage.getItem(`group_polls_${newGroup.id}`);
+    const polls = existingPolls ? JSON.parse(existingPolls) : [];
+    polls.push(defaultPoll);
+    localStorage.setItem(`group_polls_${newGroup.id}`, JSON.stringify(polls));
+    
+    setIsCreateDialogOpen(false);
+    
+    // Reset form
+    setGroupName("");
+    setDescription("");
+    setSelectedFriends([]);
+    setGroupPhoto(null);
+    setGroupPhotoPreview(null);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,19 +154,13 @@ const Index = () => {
           </div>
 
           {/* Groups Grid */}
-          {loading ? (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground">Loading groups...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {groups.map((group, index) => (
-                <div key={group.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <GroupCard {...group} onClick={() => navigate(`/group/${group.id}`)} />
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {groups.map((group, index) => (
+              <div key={group.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                <GroupCard {...group} onClick={() => navigate(`/group/${group.id}`)} />
+              </div>
+            ))}
+          </div>
 
           {/* Empty State / CTA */}
           {groups.length === 0 && (
@@ -311,9 +265,9 @@ const Index = () => {
                 <Button
                   className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
                   onClick={handleCreateGroup}
-                  disabled={!groupName.trim() || creating}
+                  disabled={!groupName.trim()}
                 >
-                  {creating ? "Creating..." : "Create Group"}
+                  Create Group
                 </Button>
               </div>
             </div>
@@ -393,9 +347,9 @@ const Index = () => {
                 <Button
                   className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
                   onClick={handleCreateGroup}
-                  disabled={!groupName.trim() || creating}
+                  disabled={!groupName.trim()}
                 >
-                  {creating ? "Creating..." : "Create Group"}
+                  Create Group
                 </Button>
               </div>
             </div>
