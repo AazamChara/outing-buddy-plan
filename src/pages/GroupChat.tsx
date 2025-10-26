@@ -64,7 +64,21 @@ const GroupChat = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const groupName = "Adventure Squad";
+  const [groupName, setGroupName] = useState<string>("Adventure Squad");
+  const [memberCount, setMemberCount] = useState<number>(0);
+
+  // Load group header data (name, memberCount) from saved groups
+  useEffect(() => {
+    const savedGroups = localStorage.getItem('groups');
+    if (savedGroups) {
+      const groups = JSON.parse(savedGroups);
+      const currentGroup = groups.find((g: any) => g.id === parseInt(id || '0'));
+      if (currentGroup) {
+        setGroupName(currentGroup.name || "Group");
+        setMemberCount(currentGroup.memberCount || 0);
+      }
+    }
+  }, [id]);
 
   // Load shared activities from localStorage
   useEffect(() => {
@@ -196,7 +210,7 @@ const GroupChat = () => {
           </Avatar>
           <div className="flex-1">
             <h1 className="font-semibold text-foreground">{groupName}</h1>
-            <p className="text-xs text-muted-foreground">5 members</p>
+            <p className="text-xs text-muted-foreground">{memberCount} {memberCount === 1 ? 'member' : 'members'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
