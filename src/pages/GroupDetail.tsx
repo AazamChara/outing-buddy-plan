@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin, Settings } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin, Settings, MoreVertical, Pin, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { GroupSettings } from "@/components/GroupSettings";
 import { CreatePollForm } from "@/components/CreatePollForm";
 import { toast } from "sonner";
 import placeholderImage from "@/assets/group-placeholder.jpg";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface PollOption {
   id: number;
@@ -38,6 +39,7 @@ interface Poll {
   totalVotes: number;
   anonymousVoting: boolean;
   reactions?: { emoji: string; count: number }[];
+  pinned?: boolean;
 }
 
 const mockPolls: Poll[] = [
@@ -262,6 +264,31 @@ const GroupDetail = () => {
     setTimeout(() => navigate("/"), 1000);
   };
 
+  const handleTogglePin = (pollId: number) => {
+    setPolls(polls.map(poll => 
+      poll.id === pollId ? { ...poll, pinned: !poll.pinned } : poll
+    ));
+    const poll = polls.find(p => p.id === pollId);
+    toast.success(poll?.pinned ? "Poll unpinned" : "Poll pinned to top");
+  };
+
+  const handleDeletePoll = (pollId: number) => {
+    setPolls(polls.filter(poll => poll.id !== pollId));
+    toast.success("Poll deleted");
+  };
+
+  const handleReplyInChat = (pollTitle: string) => {
+    localStorage.setItem('chat_reply_poll', pollTitle);
+    navigate(`/group/${id}/chat`);
+  };
+
+  // Sort polls: pinned ones first
+  const sortedPolls = [...polls].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
+
 
   return (
     <div className="min-h-screen pb-20 md:pb-8 bg-background">
@@ -330,13 +357,52 @@ const GroupDetail = () => {
 
         {/* Polls List */}
         <div className="space-y-4">
-          {polls.map((poll) => (
+          {sortedPolls.map((poll) => (
             <Card
               key={poll.id}
               id={`poll-${poll.id}`}
-              className="p-5 border-border/50 shadow-sm hover:shadow-md transition-shadow"
+              className={cn(
+                "p-5 border-border/50 shadow-sm hover:shadow-md transition-shadow relative",
+                poll.pinned && "border-[hsl(var(--teal))] border-2"
+              )}
             >
-              <div className="mb-4">
+              {/* Three-dot menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-3 right-3 h-8 w-8"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleReplyInChat(poll.title)}>
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Reply in chat
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTogglePin(poll.id)}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {poll.pinned ? "Unpin poll" : "Pin to top"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleDeletePoll(poll.id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete poll
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="mb-4 pr-8">
+                {poll.pinned && (
+                  <div className="flex items-center gap-1 text-xs text-[hsl(var(--teal))] font-semibold mb-2">
+                    <Pin className="h-3 w-3" />
+                    Pinned
+                  </div>
+                )}
                 <h3 className="font-semibold text-foreground mb-2">{poll.title}</h3>
                 {(poll.eventDate || poll.eventTime || poll.location) && (
                   <div className="space-y-1 text-xs text-muted-foreground">
