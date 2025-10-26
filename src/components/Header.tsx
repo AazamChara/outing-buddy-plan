@@ -1,8 +1,86 @@
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, Users, Vote, UserPlus } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { ScrollArea } from "./ui/scroll-area";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+interface Notification {
+  id: number;
+  type: "poll" | "group" | "invite";
+  title: string;
+  message: string;
+  timestamp: Date;
+  read: boolean;
+}
 
 export const Header = () => {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([
+    {
+      id: 1,
+      type: "poll",
+      title: "New Poll",
+      message: "John created a new poll in Adventure Squad",
+      timestamp: new Date(2025, 9, 25, 14, 30),
+      read: false,
+    },
+    {
+      id: 2,
+      type: "invite",
+      title: "Group Invite",
+      message: "Jane invited you to join Foodie Friends",
+      timestamp: new Date(2025, 9, 25, 10, 15),
+      read: false,
+    },
+    {
+      id: 3,
+      type: "group",
+      title: "New Group",
+      message: "You were added to Weekend Warriors",
+      timestamp: new Date(2025, 9, 24, 16, 45),
+      read: true,
+    },
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markAsRead = (id: number) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "poll":
+        return <Vote className="h-4 w-4 text-[hsl(var(--teal))]" />;
+      case "group":
+        return <Users className="h-4 w-4 text-[hsl(var(--peach))]" />;
+      case "invite":
+        return <UserPlus className="h-4 w-4 text-[hsl(var(--lavender-dark))]" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const formatTimestamp = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 md:ml-60">
@@ -32,10 +110,78 @@ export const Header = () => {
 
         {/* Right side actions */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full animate-pulse" />
-          </Button>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full animate-pulse" />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent 
+              className="w-80 p-0 bg-background border-border shadow-lg z-[60]" 
+              align="end"
+              sideOffset={8}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h3 className="font-semibold text-foreground">Notifications</h3>
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={markAllAsRead}
+                    className="h-8 text-xs text-[hsl(var(--teal))] hover:text-[hsl(var(--teal-dark))]"
+                  >
+                    Mark all read
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="h-[400px]">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4">
+                    <Bell className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                    <p className="text-sm text-muted-foreground">No notifications yet</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={() => markAsRead(notification.id)}
+                        className={cn(
+                          "w-full p-4 text-left hover:bg-secondary/50 transition-colors",
+                          !notification.read && "bg-secondary/30"
+                        )}
+                      >
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0 mt-1">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="font-semibold text-sm text-foreground">
+                                {notification.title}
+                              </p>
+                              {!notification.read && (
+                                <span className="flex-shrink-0 h-2 w-2 bg-[hsl(var(--teal))] rounded-full mt-1" />
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-1">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatTimestamp(notification.timestamp)}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </header>
