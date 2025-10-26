@@ -69,6 +69,19 @@ const Index = () => {
     localStorage.setItem('groups', JSON.stringify(groups));
   }, [groups]);
 
+  // Reload groups when returning to this page
+  useEffect(() => {
+    const handleFocus = () => {
+      const savedGroups = localStorage.getItem('groups');
+      if (savedGroups) {
+        setGroups(JSON.parse(savedGroups));
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   const handleCreateGroup = () => {
     const newGroup: Group = {
       id: groups.length + 1,

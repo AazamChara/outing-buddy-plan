@@ -238,6 +238,14 @@ const GroupDetail = () => {
   };
 
   const handleExitGroup = () => {
+    // Remove group from localStorage
+    const savedGroups = localStorage.getItem('groups');
+    if (savedGroups) {
+      const groups = JSON.parse(savedGroups);
+      const updatedGroups = groups.filter((g: any) => g.id !== parseInt(id || '0'));
+      localStorage.setItem('groups', JSON.stringify(updatedGroups));
+    }
+    
     toast.success("You've left the group");
     setTimeout(() => navigate("/"), 1000);
   };
