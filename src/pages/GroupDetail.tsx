@@ -37,6 +37,7 @@ interface Poll {
   options: PollOption[];
   totalVotes: number;
   anonymousVoting: boolean;
+  reactions?: { emoji: string; count: number }[];
 }
 
 const mockPolls: Poll[] = [
@@ -47,12 +48,13 @@ const mockPolls: Poll[] = [
     eventTime: "14:00",
     location: "Central Park, NYC",
     options: [
-      { id: 1, text: "Café Crawl", votes: 3, reactions: [{ emoji: "☕", count: 2 }, { emoji: "😋", count: 1 }] },
-      { id: 2, text: "Hiking", votes: 4, voted: true, reactions: [{ emoji: "🏔️", count: 3 }, { emoji: "💪", count: 2 }] },
-      { id: 3, text: "Movie Marathon", votes: 2, reactions: [{ emoji: "🍿", count: 1 }] },
+      { id: 1, text: "Café Crawl", votes: 3 },
+      { id: 2, text: "Hiking", votes: 4, voted: true },
+      { id: 3, text: "Movie Marathon", votes: 2 },
     ],
     totalVotes: 9,
     anonymousVoting: false,
+    reactions: [{ emoji: "👍", count: 3 }, { emoji: "❤️", count: 2 }, { emoji: "🎉", count: 1 }],
   },
 ];
 
@@ -125,8 +127,8 @@ const GroupDetail = () => {
     }
   }, []);
 
-  const toggleReactions = (pollId: number, optionId: number) => {
-    const key = `${pollId}-${optionId}`;
+  const toggleReactions = (pollId: number) => {
+    const key = `${pollId}`;
     setShowReactions(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -147,33 +149,25 @@ const GroupDetail = () => {
     }));
   };
 
-  const handleReaction = (pollId: number, optionId: number, emoji: string) => {
+  const handleReaction = (pollId: number, emoji: string) => {
     setPolls(polls.map(poll => {
       if (poll.id === pollId) {
-        return {
-          ...poll,
-          options: poll.options.map(opt => {
-            if (opt.id === optionId) {
-              const reactions = opt.reactions || [];
-              const existingReaction = reactions.find(r => r.emoji === emoji);
-              
-              if (existingReaction) {
-                return {
-                  ...opt,
-                  reactions: reactions.map(r =>
-                    r.emoji === emoji ? { ...r, count: r.count + 1 } : r
-                  ),
-                };
-              } else {
-                return {
-                  ...opt,
-                  reactions: [...reactions, { emoji, count: 1 }],
-                };
-              }
-            }
-            return opt;
-          }),
-        };
+        const reactions = poll.reactions || [];
+        const existingReaction = reactions.find(r => r.emoji === emoji);
+        
+        if (existingReaction) {
+          return {
+            ...poll,
+            reactions: reactions.map(r =>
+              r.emoji === emoji ? { ...r, count: r.count + 1 } : r
+            ),
+          };
+        } else {
+          return {
+            ...poll,
+            reactions: [...reactions, { emoji, count: 1 }],
+          };
+        }
       }
       return poll;
     }));
@@ -368,11 +362,9 @@ const GroupDetail = () => {
                   const percentage = poll.totalVotes > 0 
                     ? (option.votes / poll.totalVotes) * 100 
                     : 0;
-                  const reactionKey = `${poll.id}-${option.id}`;
-                  const isReactionOpen = showReactions[reactionKey] || false;
                   
                   return (
-                    <div key={option.id} className="space-y-2">
+                    <div key={option.id}>
                       <button
                         onClick={() => handleVote(poll.id, option.id)}
                         className={`
@@ -390,69 +382,67 @@ const GroupDetail = () => {
                               ({option.votes} {option.votes === 1 ? 'vote' : 'votes'})
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {option.voted && (
-                              <span className="text-xs text-[hsl(var(--teal))] font-semibold">✓</span>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleReactions(poll.id, option.id);
-                              }}
-                              className="text-lg hover:scale-125 transition-transform"
-                            >
-                              😊
-                            </button>
-                          </div>
+                          {option.voted && (
+                            <span className="text-xs text-[hsl(var(--teal))] font-semibold">✓</span>
+                          )}
                         </div>
                         {poll.totalVotes > 0 && (
-                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-[hsl(var(--teal))] transition-all duration-300"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
                         )}
-                        
-                        {/* Existing Reactions Display */}
-                        {option.reactions && option.reactions.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {option.reactions.map((reaction, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/50 rounded-full text-xs animate-bounce-in"
-                              >
-                                <span className="text-base">{reaction.emoji}</span>
-                                <span className="text-muted-foreground">{reaction.count}</span>
-                              </span>
-                            ))}
-                          </div>
-                        )}
                       </button>
-
-                      {/* Reaction Picker */}
-                      {isReactionOpen && (
-                        <div className="flex gap-2 px-3 py-2 bg-card border border-border rounded-lg animate-fade-in">
-                          {availableReactions.map((emoji) => (
-                            <button
-                              key={emoji}
-                              onClick={() => {
-                                handleReaction(poll.id, option.id, emoji);
-                                toggleReactions(poll.id, option.id);
-                              }}
-                              className="text-2xl hover:scale-150 transition-transform active:scale-125"
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
               </div>
 
-              <p className="text-xs text-muted-foreground">{poll.totalVotes} total votes</p>
+              {/* Poll-level reactions */}
+              <div className="flex items-center justify-between pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground">{poll.totalVotes} total votes</p>
+                <button
+                  onClick={() => toggleReactions(poll.id)}
+                  className="text-lg hover:scale-125 transition-transform"
+                >
+                  😊
+                </button>
+              </div>
+
+              {/* Poll Reactions Display */}
+              {poll.reactions && poll.reactions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+                  {poll.reactions.map((reaction, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/50 rounded-full text-xs animate-bounce-in"
+                    >
+                      <span className="text-base">{reaction.emoji}</span>
+                      <span className="text-muted-foreground">{reaction.count}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Reaction Picker */}
+              {showReactions[`${poll.id}`] && (
+                <div className="flex gap-2 px-3 py-2 bg-card border border-border rounded-lg mt-2 animate-fade-in">
+                  {availableReactions.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => {
+                        handleReaction(poll.id, emoji);
+                        toggleReactions(poll.id);
+                      }}
+                      className="text-2xl hover:scale-150 transition-transform active:scale-125"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
             </Card>
           ))}
 
