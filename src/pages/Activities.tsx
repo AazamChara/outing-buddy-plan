@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +23,7 @@ interface Activity {
 }
 
 const Activities = () => {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>("For You");
@@ -31,9 +33,16 @@ const Activities = () => {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { toast } = useToast();
 
-  const handleShareActivity = (activity: Activity) => {
+  const handleShareActivity = (activity: Activity, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setSelectedActivity(activity);
     setShareDialogOpen(true);
+  };
+
+  const handleActivityClick = (activity: Activity) => {
+    // Save activity to localStorage for detail page
+    localStorage.setItem(`activity_${activity.id}`, JSON.stringify(activity));
+    navigate(`/activity/${activity.id}`);
   };
 
   const filters = ["For You", "Dining", "Events", "Movies"];
@@ -161,7 +170,10 @@ const Activities = () => {
           <div className="space-y-4">
             {/* Featured Card - Larger first item for Movies */}
             {activeFilter === "Movies" && filteredActivities[0] && (
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+              <Card 
+                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleActivityClick(filteredActivities[0])}
+              >
                 <div className="relative h-80 bg-muted">
                   <img
                     src={filteredActivities[0].image || "/placeholder.svg"}
@@ -176,14 +188,21 @@ const Activities = () => {
                       {filteredActivities[0].venue || "UA16+ | Hindi"}
                     </p>
                     <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1 bg-transparent border-white text-white hover:bg-white hover:text-black">
-                        Book tickets
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-transparent border-white text-white hover:bg-white hover:text-black"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleActivityClick(filteredActivities[0]);
+                        }}
+                      >
+                        View Details
                       </Button>
                       <Button 
                         variant="outline" 
                         size="icon"
                         className="bg-transparent border-white text-white hover:bg-white hover:text-black"
-                        onClick={() => handleShareActivity(filteredActivities[0])}
+                        onClick={(e) => handleShareActivity(filteredActivities[0], e)}
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
@@ -196,7 +215,11 @@ const Activities = () => {
             {/* Regular Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {(activeFilter === "Movies" ? filteredActivities.slice(1) : filteredActivities).map((activity) => (
-                <Card key={activity.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <Card 
+                  key={activity.id} 
+                  className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => handleActivityClick(activity)}
+                >
                   <div className="relative">
                     <div className="h-48 bg-muted">
                       <img
@@ -240,10 +263,7 @@ const Activities = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 flex-shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShareActivity(activity);
-                        }}
+                        onClick={(e) => handleShareActivity(activity, e)}
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>

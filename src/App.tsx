@@ -8,6 +8,7 @@ import { MobileNav, DesktopNav } from "./components/Navigation";
 import Index from "./pages/Index";
 import Account from "./pages/Account";
 import Activities from "./pages/Activities";
+import ActivityDetail from "./pages/ActivityDetail";
 import GroupDetail from "./pages/GroupDetail";
 import GroupChat from "./pages/GroupChat";
 import NotFound from "./pages/NotFound";
@@ -17,23 +18,25 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const location = useLocation();
   const isChatPage = location.pathname.includes('/chat');
+  const isActivityDetailPage = location.pathname.includes('/activity/');
 
   return (
     <div className="min-h-screen flex w-full">
-      {!isChatPage && <DesktopNav />}
-      <div className={`flex-1 ${!isChatPage ? 'md:ml-60' : ''}`}>
-        {!isChatPage && <Header />}
+      {!isChatPage && !isActivityDetailPage && <DesktopNav />}
+      <div className={`flex-1 ${!isChatPage && !isActivityDetailPage ? 'md:ml-60' : ''}`}>
+        {!isChatPage && !isActivityDetailPage && <Header />}
         <main>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/account" element={<Account />} />
             <Route path="/activities" element={<Activities />} />
+            <Route path="/activity/:id" element={<ActivityDetail />} />
             <Route path="/group/:id" element={<GroupDetail />} />
             <Route path="/group/:id/chat" element={<GroupChat />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
-        {!isChatPage && <MobileNav />}
+        {!isChatPage && !isActivityDetailPage && <MobileNav />}
       </div>
     </div>
   );
