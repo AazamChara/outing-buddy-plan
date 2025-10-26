@@ -15,8 +15,18 @@ interface Message {
   sender: string;
   timestamp: Date;
   isOwn: boolean;
-  type?: "text" | "image" | "video" | "location" | "contact";
+  type?: "text" | "image" | "video" | "location" | "contact" | "activity";
   mediaUrl?: string;
+  activityData?: {
+    id: string;
+    title: string;
+    type: string;
+    venue?: string;
+    date?: string;
+    price?: string;
+    image?: string;
+    rating?: number;
+  };
 }
 
 const mockMessages: Message[] = [
@@ -216,17 +226,71 @@ const GroupChat = () => {
               className={`flex ${message.isOwn ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                className={`${
+                  message.type === "activity" ? "max-w-[85%]" : "max-w-[70%]"
+                } rounded-2xl ${
                   message.isOwn
                     ? "bg-[hsl(var(--teal))] text-white rounded-br-sm"
                     : "bg-secondary text-foreground rounded-bl-sm"
-                }`}
+                } ${message.type === "activity" ? "" : "px-4 py-2"}`}
               >
-                {!message.isOwn && (
+                {!message.isOwn && message.type !== "activity" && (
                   <p className="text-xs font-semibold mb-1 text-[hsl(var(--teal))]">
                     {message.sender}
                   </p>
                 )}
+                
+                {/* Activity Card */}
+                {message.type === "activity" && message.activityData && (
+                  <div className="overflow-hidden">
+                    {message.activityData.image && (
+                      <img
+                        src={message.activityData.image}
+                        alt={message.activityData.title}
+                        className="w-full h-40 object-cover"
+                      />
+                    )}
+                    <div className="p-4">
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className="text-2xl">🎉</span>
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold mb-1 text-[hsl(var(--teal))]">
+                            Check out this activity!
+                          </p>
+                          <h4 className="font-bold text-base mb-1">
+                            {message.activityData.title}
+                          </h4>
+                          {message.activityData.venue && (
+                            <p className="text-sm flex items-center gap-1 mb-1">
+                              📍 {message.activityData.venue}
+                            </p>
+                          )}
+                          {message.activityData.date && (
+                            <p className="text-sm flex items-center gap-1 mb-1">
+                              📅 {new Date(message.activityData.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                          {message.activityData.price && (
+                            <p className="text-sm flex items-center gap-1">
+                              💰 {message.activityData.price}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2">
+                        {formatTime(message.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Image Message */}
                 {message.type === "image" && message.mediaUrl && (
                   <img
                     src={message.mediaUrl}
@@ -234,14 +298,20 @@ const GroupChat = () => {
                     className="rounded-lg mb-2 max-w-full"
                   />
                 )}
-                <p className="text-sm break-words">{message.text}</p>
-                <p
-                  className={`text-[10px] mt-1 ${
-                    message.isOwn ? "text-white/70" : "text-muted-foreground"
-                  }`}
-                >
-                  {formatTime(message.timestamp)}
-                </p>
+                
+                {/* Text/Other Messages */}
+                {message.type !== "activity" && (
+                  <>
+                    <p className="text-sm break-words">{message.text}</p>
+                    <p
+                      className={`text-[10px] mt-1 ${
+                        message.isOwn ? "text-white/70" : "text-muted-foreground"
+                      }`}
+                    >
+                      {formatTime(message.timestamp)}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           ))}

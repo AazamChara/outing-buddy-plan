@@ -62,15 +62,24 @@ export const ShareActivityDialog = ({ open, onOpenChange, activity }: ShareActiv
     
     const group = mockGroups.find(g => g.id === selectedGroup);
     
-    // Create a formatted message for the activity
+    // Create a rich activity card message
     const activityMessage = {
       id: Date.now(),
-      text: `🎉 Check out this activity!\n\n${activity.title}${activity.venue ? `\n📍 ${activity.venue}` : ''}${activity.date ? `\n📅 ${activity.date}` : ''}${activity.price ? `\n💰 ${activity.price}` : ''}`,
+      text: "Check out this activity!",
       sender: "You",
       timestamp: new Date(),
       isOwn: true,
       type: "activity",
-      activityData: activity
+      activityData: {
+        id: activity.id,
+        title: activity.title,
+        type: activity.type,
+        venue: activity.venue,
+        date: activity.date,
+        price: activity.price,
+        image: activity.image,
+        rating: activity.rating
+      }
     };
     
     // Store the message to be picked up by the chat component
