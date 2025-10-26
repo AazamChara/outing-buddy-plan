@@ -12,6 +12,7 @@ import ActivityDetail from "./pages/ActivityDetail";
 import GroupDetail from "./pages/GroupDetail";
 import GroupChat from "./pages/GroupChat";
 import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
@@ -19,15 +20,17 @@ const AppContent = () => {
   const location = useLocation();
   const isChatPage = location.pathname.includes('/chat');
   const isActivityDetailPage = location.pathname.includes('/activity/');
+  const isAuthPage = location.pathname === '/auth';
 
   return (
     <div className="min-h-screen flex w-full">
-      {!isChatPage && !isActivityDetailPage && <DesktopNav />}
-      <div className={`flex-1 ${!isChatPage && !isActivityDetailPage ? 'md:ml-60' : ''}`}>
-        {!isChatPage && !isActivityDetailPage && <Header />}
+      {!isChatPage && !isActivityDetailPage && !isAuthPage && <DesktopNav />}
+      <div className={`flex-1 ${!isChatPage && !isActivityDetailPage && !isAuthPage ? 'md:ml-60' : ''}`}>
+        {!isChatPage && !isActivityDetailPage && !isAuthPage && <Header />}
         <main>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/account" element={<Account />} />
             <Route path="/activities" element={<Activities />} />
             <Route path="/activity/:id" element={<ActivityDetail />} />
@@ -36,7 +39,7 @@ const AppContent = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
-        {!isChatPage && !isActivityDetailPage && <MobileNav />}
+        {!isChatPage && !isActivityDetailPage && !isAuthPage && <MobileNav />}
       </div>
     </div>
   );
