@@ -5,8 +5,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Star, Search } from "lucide-react";
+import { Star, Search, Share2 } from "lucide-react";
 import { LocationSelector } from "@/components/LocationSelector";
+import { ShareActivityDialog } from "@/components/ShareActivityDialog";
 
 interface Activity {
   id: string;
@@ -26,7 +27,14 @@ const Activities = () => {
   const [activeFilter, setActiveFilter] = useState<string>("For You");
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { toast } = useToast();
+
+  const handleShareActivity = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setShareDialogOpen(true);
+  };
 
   const filters = ["For You", "Dining", "Events", "Movies"];
 
@@ -167,9 +175,19 @@ const Activities = () => {
                     <p className="text-white/80 text-sm mb-4">
                       {filteredActivities[0].venue || "UA16+ | Hindi"}
                     </p>
-                    <Button variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black">
-                      Book tickets
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1 bg-transparent border-white text-white hover:bg-white hover:text-black">
+                        Book tickets
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="bg-transparent border-white text-white hover:bg-white hover:text-black"
+                        onClick={() => handleShareActivity(filteredActivities[0])}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -197,25 +215,38 @@ const Activities = () => {
                     )}
                   </div>
                   <CardContent className="p-4 space-y-2">
-                    <div>
-                      <h3 className="font-semibold text-lg line-clamp-1">{activity.title}</h3>
-                      {activity.rating && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-medium">
-                            {activity.rating} ★
-                          </span>
-                          {activity.venue && (
-                            <span className="text-sm text-muted-foreground line-clamp-1">
-                              {activity.venue}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg line-clamp-1">{activity.title}</h3>
+                        {activity.rating && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-medium">
+                              {activity.rating} ★
                             </span>
-                          )}
-                        </div>
-                      )}
-                      {!activity.rating && activity.venue && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {activity.venue}
-                        </p>
-                      )}
+                            {activity.venue && (
+                              <span className="text-sm text-muted-foreground line-clamp-1">
+                                {activity.venue}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {!activity.rating && activity.venue && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {activity.venue}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareActivity(activity);
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
                     </div>
                     
                     {activity.date && (
@@ -236,6 +267,12 @@ const Activities = () => {
           </div>
         )}
       </div>
+
+      <ShareActivityDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        activity={selectedActivity}
+      />
     </div>
   );
 };
