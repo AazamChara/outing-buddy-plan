@@ -35,12 +35,15 @@ export default function Auth() {
 
       if (error) throw error;
 
+      // Wait a moment for the profile to be created by the trigger
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       toast({
         title: "Account created!",
-        description: "Welcome to Outing Buddy. Redirecting...",
+        description: "Welcome to Outing Buddy. Setting up your account...",
       });
 
-      setTimeout(() => navigate("/"), 1000);
+      setTimeout(() => navigate("/"), 1500);
     } catch (error: any) {
       toast({
         title: "Sign up failed",

@@ -30,6 +30,12 @@ export const LocationSelector = ({ onLocationChange }: LocationSelectorProps) =>
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          
+          // Save to localStorage
+          localStorage.setItem("location_permission", "granted");
+          localStorage.setItem("user_latitude", latitude.toString());
+          localStorage.setItem("user_longitude", longitude.toString());
+          
           reverseGeocode(latitude, longitude);
           onLocationChange({ latitude, longitude, name: locationName });
         },
@@ -84,6 +90,10 @@ export const LocationSelector = ({ onLocationChange }: LocationSelectorProps) =>
       const coords = cityCoordinates[cityKey];
       
       if (coords) {
+        // Save to localStorage
+        localStorage.setItem("user_latitude", coords.lat.toString());
+        localStorage.setItem("user_longitude", coords.lng.toString());
+        
         setLocationName(customLocation);
         onLocationChange({ latitude: coords.lat, longitude: coords.lng, name: customLocation });
         setOpen(false);

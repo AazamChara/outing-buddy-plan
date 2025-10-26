@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { PermissionsDialog } from "@/components/PermissionsDialog";
+import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { ContactSelector } from "@/components/ContactSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Group {
   id: string;
@@ -28,8 +29,10 @@ interface Group {
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, session } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
   const [groupPhotoPreview, setGroupPhotoPreview] = useState<string | null>(null);
@@ -38,6 +41,14 @@ const Index = () => {
   const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const isMobile = useIsMobile();
+
+  // Check if onboarding is needed
+  useEffect(() => {
+    const onboardingCompleted = localStorage.getItem("onboarding_completed");
+    if (!onboardingCompleted && user) {
+      setShowWelcome(true);
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchGroups();
@@ -65,8 +76,10 @@ const Index = () => {
 
   const fetchGroups = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !session) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('groups')
@@ -113,8 +126,27 @@ const Index = () => {
     setIsCreating(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      // Ensure we have a valid authenticated session
+      if (!user || !session) {
+        throw new Error("Please sign in to create a group");
+      }
+
+      // Double-check the session is still valid and get fresh session
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !currentSession) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
+      // Verify user profile exists (needed for foreign key constraint)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Your profile is still being set up. Please wait a moment and try again.");
+      }
 
       // Upload photo if exists
       let photoUrl = null;
@@ -223,7 +255,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen pb-20 md:pb-8">
-      <PermissionsDialog />
+      <WelcomeDialog 
+        open={showWelcome} 
+        onComplete={() => {
+          setShowWelcome(false);
+          fetchGroups();
+        }} 
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Groups Section */}
         <section className="mb-8">
