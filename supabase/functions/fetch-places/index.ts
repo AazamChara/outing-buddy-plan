@@ -17,10 +17,20 @@ Deno.serve(async (req) => {
 
     // If Entertainment type is selected and TMDB key is available, fetch from TMDB
     if (type === 'Entertainment' && tmdbApiKey) {
-      console.log('Fetching entertainment content from TMDB');
+      // Determine region based on coordinates (simplified)
+      let region = 'US'; // default
+      if (latitude && longitude) {
+        // Simple region detection based on coordinates
+        if (latitude > 49 && latitude < 60 && longitude > -141 && longitude < -52) region = 'CA'; // Canada
+        else if (latitude > 35 && latitude < 72 && longitude > -11 && longitude < 40) region = 'GB'; // UK/Europe
+        else if (latitude > 25 && latitude < 50 && longitude > -125 && longitude < -65) region = 'US'; // USA
+        else if (latitude > -44 && latitude < -10 && longitude > 113 && longitude < 154) region = 'AU'; // Australia
+      }
+      
+      console.log(`Fetching entertainment content from TMDB for region: ${region}`);
 
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/now_playing?api_key=${tmdbApiKey}&language=en-US&page=1&region=US`
+        `https://api.themoviedb.org/3/movie/now_playing?api_key=${tmdbApiKey}&language=en-US&page=1&region=${region}`
       );
 
       if (!response.ok) {
