@@ -23,11 +23,10 @@ interface PollOption {
   text: string;
   votes: number;
   voted?: boolean;
-  voters?: string[]; // Member IDs who voted for this option
   reactions?: { emoji: string; count: number }[];
 }
 
-const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "🙏", "💯"];
+const availableReactions = ["👍", "❤️", "🎉", "🔥", "😍", "👏"];
 
 interface Poll {
   id: number;
@@ -48,9 +47,9 @@ const mockPolls: Poll[] = [
     eventTime: "14:00",
     location: "Central Park, NYC",
     options: [
-      { id: 1, text: "Café Crawl", votes: 3, voters: ["1", "2", "3"], reactions: [{ emoji: "☕", count: 2 }, { emoji: "😋", count: 1 }] },
-      { id: 2, text: "Hiking", votes: 4, voters: ["1", "2", "3"], voted: true, reactions: [{ emoji: "🏔️", count: 3 }, { emoji: "💪", count: 2 }] },
-      { id: 3, text: "Movie Marathon", votes: 2, voters: ["1", "3"], reactions: [{ emoji: "🍿", count: 1 }] },
+      { id: 1, text: "Café Crawl", votes: 3, reactions: [{ emoji: "☕", count: 2 }, { emoji: "😋", count: 1 }] },
+      { id: 2, text: "Hiking", votes: 4, voted: true, reactions: [{ emoji: "🏔️", count: 3 }, { emoji: "💪", count: 2 }] },
+      { id: 3, text: "Movie Marathon", votes: 2, reactions: [{ emoji: "🍿", count: 1 }] },
     ],
     totalVotes: 9,
     anonymousVoting: false,
@@ -132,34 +131,16 @@ const GroupDetail = () => {
   };
 
   const handleVote = (pollId: number, optionId: number) => {
-    const currentUserId = "1"; // Mock current user - in real app this would come from auth
-    
     setPolls(polls.map(poll => {
       if (poll.id === pollId) {
         return {
           ...poll,
-          options: poll.options.map(opt => {
-            // Remove current user from all options first
-            const cleanedVoters = (opt.voters || []).filter(v => v !== currentUserId);
-            
-            // If this is the option being voted for, add current user
-            if (opt.id === optionId) {
-              return {
-                ...opt,
-                voted: true,
-                votes: opt.voted ? opt.votes : opt.votes + 1,
-                voters: [...cleanedVoters, currentUserId],
-              };
-            } else {
-              return {
-                ...opt,
-                voted: false,
-                votes: opt.voted ? opt.votes - 1 : opt.votes,
-                voters: cleanedVoters,
-              };
-            }
-          }),
-          totalVotes: poll.options.find(opt => opt.voted) ? poll.totalVotes : poll.totalVotes + 1,
+          options: poll.options.map(opt => ({
+            ...opt,
+            voted: opt.id === optionId,
+            votes: opt.id === optionId ? opt.votes + 1 : opt.votes - (opt.voted ? 1 : 0),
+          })),
+          totalVotes: poll.totalVotes + 1,
         };
       }
       return poll;
@@ -212,8 +193,6 @@ const GroupDetail = () => {
         id: idx + 1,
         text,
         votes: 0,
-        voters: [],
-        reactions: [],
       })),
       totalVotes: 0,
       anonymousVoting,
@@ -361,170 +340,119 @@ const GroupDetail = () => {
             <Card
               key={poll.id}
               id={`poll-${poll.id}`}
-              className="p-0 border-border/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden bg-[hsl(120,60%,95%)]"
+              className="p-5 border-border/50 shadow-sm hover:shadow-md transition-shadow"
             >
-              {/* Emoji Reactions Bar at Top */}
-              <div className="px-5 pt-4 pb-3 bg-white/80 backdrop-blur-sm border-b border-border/30">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {availableReactions.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => handleReaction(poll.id, poll.options[0].id, emoji)}
-                      className="text-3xl hover:scale-125 transition-transform hover:rotate-12 active:scale-110"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                  <button 
-                    className="w-8 h-8 rounded-full bg-secondary/50 hover:bg-secondary flex items-center justify-center text-xl transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground mb-2">{poll.title}</h3>
+                {(poll.eventDate || poll.eventTime || poll.location) && (
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {poll.eventDate && (
+                      <div className="flex items-center gap-1">
+                        <CalendarIcon className="h-3 w-3" />
+                        <span>{format(poll.eventDate, "dd MMM yyyy")}</span>
+                        {poll.eventTime && <span className="ml-1">at {poll.eventTime}</span>}
+                      </div>
+                    )}
+                    {poll.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>{poll.location}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Poll Content */}
-              <div className="p-5">
-                {/* Poll Title and Details */}
-                <div className="mb-4">
-                  <h3 className="font-bold text-2xl text-foreground mb-3">{poll.title}</h3>
+              <div className="space-y-3 mb-4">
+                {poll.options.map((option) => {
+                  const percentage = poll.totalVotes > 0 
+                    ? (option.votes / poll.totalVotes) * 100 
+                    : 0;
+                  const reactionKey = `${poll.id}-${option.id}`;
+                  const isReactionOpen = showReactions[reactionKey] || false;
                   
-                  {/* Select instruction */}
-                  <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-                    <div className="w-5 h-5 rounded-full bg-muted-foreground/20 flex items-center justify-center">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-sm font-medium">Select one or more</span>
-                  </div>
-
-                  {(poll.eventDate || poll.eventTime || poll.location) && (
-                    <div className="space-y-1 text-xs text-muted-foreground mb-3">
-                      {poll.eventDate && (
-                        <div className="flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          <span>{format(poll.eventDate, "dd MMM yyyy")}</span>
-                          {poll.eventTime && <span className="ml-1">at {poll.eventTime}</span>}
-                        </div>
-                      )}
-                      {poll.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>{poll.location}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Poll Options */}
-                <div className="space-y-3 mb-4">
-                  {poll.options.map((option) => {
-                    const percentage = poll.totalVotes > 0 
-                      ? (option.votes / poll.totalVotes) * 100 
-                      : 0;
-                    
-                    return (
-                      <div key={option.id} className="relative">
-                        <button
-                          onClick={() => handleVote(poll.id, option.id)}
-                          className="w-full text-left transition-all group"
-                        >
-                          {/* Option Header with Checkbox */}
-                          <div className="flex items-center gap-3 mb-2">
-                            {/* Large Circular Checkbox */}
-                            <div className={`
-                              w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all
-                              ${option.voted 
-                                ? 'bg-[hsl(var(--teal))] border-[hsl(var(--teal))]' 
-                                : 'border-muted-foreground/40 bg-white group-hover:border-[hsl(var(--teal))]/50'
-                              }
-                            `}>
-                              {option.voted && (
-                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                            
-                            {/* Option Text */}
-                            <span className="font-semibold text-lg text-foreground flex-1">{option.text}</span>
-                            
-                            {/* Vote Count and Voters */}
-                            <div className="flex items-center gap-2">
-                              {!poll.anonymousVoting && option.voters && option.voters.length > 0 && (
-                                <div className="flex -space-x-2">
-                                  {option.voters.slice(0, 3).map((voterId) => {
-                                    const voter = members.find(m => m.id === voterId);
-                                    if (!voter) return null;
-                                    return (
-                                      <div
-                                        key={voterId}
-                                        className="w-6 h-6 rounded-full bg-gradient-to-br from-[hsl(var(--teal))] to-[hsl(var(--peach))] border-2 border-white flex items-center justify-center text-xs font-bold text-white"
-                                        title={voter.name}
-                                      >
-                                        {voter.name.charAt(0)}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              <span className="text-lg font-bold text-foreground">{option.votes}</span>
-                            </div>
+                  return (
+                    <div key={option.id} className="space-y-2">
+                      <button
+                        onClick={() => handleVote(poll.id, option.id)}
+                        className={`
+                          w-full p-3 rounded-lg border text-left transition-all
+                          ${option.voted 
+                            ? 'border-[hsl(var(--teal))] bg-[hsl(var(--teal))]/10' 
+                            : 'border-border hover:border-[hsl(var(--teal))]/50 hover:bg-secondary/50'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="font-medium text-sm">{option.text}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({option.votes} {option.votes === 1 ? 'vote' : 'votes'})
+                            </span>
                           </div>
-
-                          {/* Progress Bar */}
-                          <div className="h-2 bg-muted-foreground/20 rounded-full overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            {option.voted && (
+                              <span className="text-xs text-[hsl(var(--teal))] font-semibold">✓</span>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleReactions(poll.id, option.id);
+                              }}
+                              className="text-lg hover:scale-125 transition-transform"
+                            >
+                              😊
+                            </button>
+                          </div>
+                        </div>
+                        {poll.totalVotes > 0 && (
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
                             <div 
-                              className={`h-full transition-all duration-500 ${
-                                option.voted 
-                                  ? 'bg-[hsl(var(--teal))]' 
-                                  : 'bg-muted-foreground/40'
-                              }`}
+                              className="h-full bg-[hsl(var(--teal))] transition-all duration-300"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
+                        )}
+                        
+                        {/* Existing Reactions Display */}
+                        {option.reactions && option.reactions.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {option.reactions.map((reaction, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/50 rounded-full text-xs animate-bounce-in"
+                              >
+                                <span className="text-base">{reaction.emoji}</span>
+                                <span className="text-muted-foreground">{reaction.count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </button>
 
-                          {/* Voter Names (if not anonymous) */}
-                          {!poll.anonymousVoting && option.voters && option.voters.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {option.voters.map((voterId) => {
-                                const voter = members.find(m => m.id === voterId);
-                                if (!voter) return null;
-                                return (
-                                  <span
-                                    key={voterId}
-                                    className="text-xs px-2 py-0.5 bg-white/60 rounded-full text-muted-foreground font-medium"
-                                  >
-                                    {voter.name}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Timestamp */}
-                <div className="flex justify-end items-center gap-1 text-xs text-muted-foreground mb-3">
-                  <span>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-
-                {/* View Votes Button */}
-                <button className="w-full py-3 text-center text-[hsl(var(--teal))] font-semibold hover:bg-white/50 transition-colors rounded-lg">
-                  View votes
-                </button>
+                      {/* Reaction Picker */}
+                      {isReactionOpen && (
+                        <div className="flex gap-2 px-3 py-2 bg-card border border-border rounded-lg animate-fade-in">
+                          {availableReactions.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => {
+                                handleReaction(poll.id, option.id, emoji);
+                                toggleReactions(poll.id, option.id);
+                              }}
+                              className="text-2xl hover:scale-150 transition-transform active:scale-125"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+
+              <p className="text-xs text-muted-foreground">{poll.totalVotes} total votes</p>
             </Card>
           ))}
 
