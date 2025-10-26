@@ -60,7 +60,10 @@ const GroupChat = () => {
   useEffect(() => {
     const sharedMessages = localStorage.getItem(`chat_messages_${id}`);
     if (sharedMessages) {
-      const parsedMessages = JSON.parse(sharedMessages);
+      const parsedMessages = JSON.parse(sharedMessages).map((msg: Message) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp), // Convert string back to Date object
+      }));
       setMessages(prev => [...prev, ...parsedMessages]);
       localStorage.removeItem(`chat_messages_${id}`); // Clear after loading
     }
