@@ -12,9 +12,48 @@ Deno.serve(async (req) => {
 
   try {
     const { latitude, longitude, type } = await req.json();
-    const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY');
+    const googleApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY');
+    const tmdbApiKey = Deno.env.get('TMDB_API_KEY');
 
-    if (!apiKey) {
+    // If Entertainment type is selected and TMDB key is available, fetch from TMDB
+    if (type === 'Entertainment' && tmdbApiKey) {
+      console.log('Fetching entertainment content from TMDB');
+
+      const response = await fetch(
+        `https://api.themoviedb.org/3/movie/now_playing?api_key=${tmdbApiKey}&language=en-US&page=1&region=US`
+      );
+
+      if (!response.ok) {
+        throw new Error(`TMDB API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Transform TMDB data to match our activity format
+      const activities = data.results.slice(0, 12).map((movie: any) => ({
+        id: movie.id.toString(),
+        title: movie.title,
+        type: 'Entertainment',
+        venue: 'In Theaters',
+        distance: 'Near you',
+        date: movie.release_date || 'Now Playing',
+        price: '$$',
+        image: movie.poster_path
+          ? `https://image.tmdb.org/t/p/w400${movie.poster_path}`
+          : 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=250&fit=crop',
+        rating: movie.vote_average || 0,
+        user_ratings_total: movie.vote_count || 0,
+      }));
+
+      console.log(`Found ${activities.length} movies from TMDB`);
+
+      return new Response(JSON.stringify({ activities }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Otherwise, use Google Places API
+    if (!googleApiKey) {
       throw new Error('Google Places API key not configured');
     }
 
@@ -36,7 +75,7 @@ Deno.serve(async (req) => {
     console.log(`Fetching places near ${lat},${lng} of type ${placeType}`);
 
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=5000&type=${placeType}&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=5000&type=${placeType}&key=${googleApiKey}`
     );
 
     if (!response.ok) {
@@ -60,7 +99,7 @@ Deno.serve(async (req) => {
       date: 'Available Now',
       price: '$'.repeat(place.price_level || 2),
       image: place.photos?.[0]?.photo_reference
-        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${apiKey}`
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${googleApiKey}`
         : 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=250&fit=crop',
       rating: place.rating || 0,
       user_ratings_total: place.user_ratings_total || 0,
