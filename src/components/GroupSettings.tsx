@@ -1,4 +1,4 @@
-import { Users, Camera, UserPlus, UserMinus, LogOut, X } from "lucide-react";
+import { Users, Camera, UserPlus, UserMinus, LogOut, X, Trash2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,34 +22,45 @@ interface Member {
   name: string;
   phone: string;
   avatar?: string;
+  role?: 'admin' | 'member';
 }
 
 interface GroupSettingsProps {
   groupName: string;
   groupPhoto?: string;
   members: Member[];
+  currentUserRole: 'admin' | 'member';
   onUpdateGroupName: (name: string) => void;
   onUpdateGroupPhoto: (photo: string | null) => void;
   onAddMembers: (members: string[]) => void;
   onRemoveMember: (memberId: string) => void;
+  onPromoteToAdmin: (memberId: string) => void;
   onExitGroup: () => void;
+  onDeleteGroup: () => void;
 }
 
 export const GroupSettings = ({
   groupName,
   groupPhoto,
   members,
+  currentUserRole,
   onUpdateGroupName,
   onUpdateGroupPhoto,
   onAddMembers,
   onRemoveMember,
+  onPromoteToAdmin,
   onExitGroup,
+  onDeleteGroup,
 }: GroupSettingsProps) => {
   const [editingName, setEditingName] = useState(false);
   const [newGroupName, setNewGroupName] = useState(groupName);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  const [memberToPromote, setMemberToPromote] = useState<string | null>(null);
+
+  const isAdmin = currentUserRole === 'admin';
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -145,9 +156,11 @@ export const GroupSettings = ({
         ) : (
           <div className="flex items-center justify-between">
             <p className="text-foreground font-medium">{groupName}</p>
-            <Button variant="outline" size="sm" onClick={() => setEditingName(true)}>
-              Edit
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setEditingName(true)}>
+                Edit
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -158,14 +171,16 @@ export const GroupSettings = ({
           <Label className="text-base font-semibold">
             Members ({members.length})
           </Label>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddMembers(true)}
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Members
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddMembers(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Members
+            </Button>
+          )}
         </div>
 
         {/* Add Members View */}
@@ -198,19 +213,42 @@ export const GroupSettings = ({
                         {member.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium text-sm">{member.name}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{member.name}</p>
+                        {member.role === 'admin' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                            <Shield className="h-3 w-3" />
+                            Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{member.phone}</p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMemberToRemove(member.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {isAdmin && member.role !== 'admin' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMemberToPromote(member.id)}
+                        className="text-primary hover:text-primary"
+                        title="Make Admin"
+                      >
+                        <Shield className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMemberToRemove(member.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))}
@@ -218,11 +256,21 @@ export const GroupSettings = ({
         )}
       </div>
 
-      {/* Exit Group Section */}
-      <div className="pt-4 border-t border-border">
+      {/* Exit/Delete Group Section */}
+      <div className="pt-4 border-t border-border space-y-3">
+        {isAdmin && (
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Group
+          </Button>
+        )}
         <Button
-          variant="destructive"
-          className="w-full"
+          variant="outline"
+          className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
           onClick={() => setShowExitDialog(true)}
         >
           <LogOut className="h-4 w-4 mr-2" />
@@ -256,6 +304,31 @@ export const GroupSettings = ({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Promote to Admin Dialog */}
+      <AlertDialog open={!!memberToPromote} onOpenChange={() => setMemberToPromote(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Make Admin</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to make this member an admin? They will have full control over the group including the ability to delete it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (memberToPromote) {
+                  onPromoteToAdmin(memberToPromote);
+                  setMemberToPromote(null);
+                }
+              }}
+            >
+              Make Admin
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Exit Group Dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
@@ -275,6 +348,30 @@ export const GroupSettings = ({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Exit Group
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Group Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this group? This action cannot be undone. All polls, messages, and group data will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onDeleteGroup();
+                setShowDeleteDialog(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Group
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

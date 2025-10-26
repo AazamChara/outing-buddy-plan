@@ -59,6 +59,7 @@ interface Member {
   name: string;
   phone: string;
   avatar?: string;
+  role?: 'admin' | 'member';
 }
 
 const GroupDetail = () => {
@@ -80,10 +81,11 @@ const GroupDetail = () => {
   const [groupName, setGroupName] = useState("Adventure Squad");
   const [groupPhoto, setGroupPhoto] = useState<string>();
   const [members, setMembers] = useState<Member[]>([
-    { id: "1", name: "John Doe", phone: "+1 234 567 8900" },
-    { id: "2", name: "Jane Smith", phone: "+1 234 567 8901" },
-    { id: "3", name: "Mike Johnson", phone: "+1 234 567 8902" },
+    { id: "1", name: "John Doe", phone: "+1 234 567 8900", role: "admin" },
+    { id: "2", name: "Jane Smith", phone: "+1 234 567 8901", role: "member" },
+    { id: "3", name: "Mike Johnson", phone: "+1 234 567 8902", role: "member" },
   ]);
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'member'>('admin');
 
   // Load group data from localStorage
   useEffect(() => {
@@ -263,6 +265,29 @@ const GroupDetail = () => {
     }
     
     toast.success("You've left the group");
+    setTimeout(() => navigate("/"), 1000);
+  };
+
+  const handlePromoteToAdmin = (memberId: string) => {
+    setMembers(members.map((m) => 
+      m.id === memberId ? { ...m, role: 'admin' as const } : m
+    ));
+    toast.success("Member promoted to admin");
+  };
+
+  const handleDeleteGroup = () => {
+    // Remove group from localStorage
+    const savedGroups = localStorage.getItem('groups');
+    if (savedGroups) {
+      const groups = JSON.parse(savedGroups);
+      const updatedGroups = groups.filter((g: any) => g.id !== parseInt(id || '0'));
+      localStorage.setItem('groups', JSON.stringify(updatedGroups));
+    }
+    
+    // Remove group polls
+    localStorage.removeItem(`group_polls_${id}`);
+    
+    toast.success("Group deleted");
     setTimeout(() => navigate("/"), 1000);
   };
 
@@ -619,11 +644,14 @@ const GroupDetail = () => {
               groupName={groupName}
               groupPhoto={groupPhoto}
               members={members}
+              currentUserRole={currentUserRole}
               onUpdateGroupName={handleUpdateGroupName}
               onUpdateGroupPhoto={handleUpdateGroupPhoto}
               onAddMembers={handleAddMembers}
               onRemoveMember={handleRemoveMember}
+              onPromoteToAdmin={handlePromoteToAdmin}
               onExitGroup={handleExitGroup}
+              onDeleteGroup={handleDeleteGroup}
             />
           </SheetContent>
         </Sheet>
@@ -637,11 +665,14 @@ const GroupDetail = () => {
               groupName={groupName}
               groupPhoto={groupPhoto}
               members={members}
+              currentUserRole={currentUserRole}
               onUpdateGroupName={handleUpdateGroupName}
               onUpdateGroupPhoto={handleUpdateGroupPhoto}
               onAddMembers={handleAddMembers}
               onRemoveMember={handleRemoveMember}
+              onPromoteToAdmin={handlePromoteToAdmin}
               onExitGroup={handleExitGroup}
+              onDeleteGroup={handleDeleteGroup}
             />
           </SheetContent>
         </Sheet>
