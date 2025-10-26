@@ -277,18 +277,6 @@ const GroupDetail = () => {
     toast.success("Poll deleted");
   };
 
-  const handleReplyInChat = (poll: Poll) => {
-    const votedOption = poll.options.find(opt => opt.voted);
-    const replyData = {
-      pollTitle: poll.title,
-      votedOption: votedOption?.text || "No vote yet",
-      pollId: poll.id,
-      timestamp: new Date().toISOString()
-    };
-    localStorage.setItem('chat_reply_poll', JSON.stringify(replyData));
-    navigate(`/group/${id}/chat`);
-  };
-
   // Sort polls: pinned ones first
   const sortedPolls = [...polls].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
@@ -385,10 +373,6 @@ const GroupDetail = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleReplyInChat(poll)}>
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Reply in chat
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleTogglePin(poll.id)}>
                     <Pin className="h-4 w-4 mr-2" />
                     {poll.pinned ? "Unpin poll" : "Pin to top"}
