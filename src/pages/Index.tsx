@@ -117,14 +117,14 @@ const Index = () => {
         photoUrl = publicUrl;
       }
 
-      // Create group
+      // Create group (created_by is set automatically by trigger)
       const { data: newGroup, error: groupError } = await (supabase as any)
         .from("groups")
-        .insert({
+        .insert([{
           name: groupName,
           description: description || null,
           photo_url: photoUrl,
-        })
+        }])
         .select()
         .single();
 
