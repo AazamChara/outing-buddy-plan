@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin, Settings, MoreVertical, Pin, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Search, Clock, Calendar as CalendarIcon, MapPin, Settings, MoreVertical, Pin, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -25,6 +25,7 @@ interface PollOption {
   votes: number;
   voted?: boolean;
   reactions?: { emoji: string; count: number }[];
+  voters?: string[];
 }
 
 const availableReactions = ["👍", "❤️", "🎉", "🔥", "😍", "👏"];
@@ -50,9 +51,9 @@ const mockPolls: Poll[] = [
     eventTime: "14:00",
     location: "Central Park, NYC",
     options: [
-      { id: 1, text: "Café Crawl", votes: 3 },
-      { id: 2, text: "Hiking", votes: 4, voted: true },
-      { id: 3, text: "Movie Marathon", votes: 2 },
+      { id: 1, text: "Café Crawl", votes: 3, voters: ["2", "3"] },
+      { id: 2, text: "Hiking", votes: 4, voted: true, voters: ["1", "2"] },
+      { id: 3, text: "Movie Marathon", votes: 2, voters: ["3"] },
     ],
     totalVotes: 9,
     anonymousVoting: false,
@@ -82,6 +83,7 @@ const GroupDetail = () => {
   const [location, setLocation] = useState("");
   const [anonymousVoting, setAnonymousVoting] = useState(false);
   const [showReactions, setShowReactions] = useState<Record<string, boolean>>({});
+  const [viewVotesPoll, setViewVotesPoll] = useState<Poll | null>(null);
   
   const [groupName, setGroupName] = useState("Adventure Squad");
   const [groupPhoto, setGroupPhoto] = useState<string>();
@@ -135,15 +137,31 @@ const GroupDetail = () => {
   };
 
   const handleVote = (pollId: number, optionId: number) => {
+    const currentUserId = "1"; // Hardcoded for demo
     setPolls(polls.map(poll => {
       if (poll.id === pollId) {
         return {
           ...poll,
-          options: poll.options.map(opt => ({
-            ...opt,
-            voted: opt.id === optionId,
-            votes: opt.id === optionId ? opt.votes + 1 : opt.votes - (opt.voted ? 1 : 0),
-          })),
+          options: poll.options.map(opt => {
+            const voters = opt.voters || [];
+            if (opt.id === optionId) {
+              // Add current user if not already voted
+              return {
+                ...opt,
+                voted: true,
+                votes: voters.includes(currentUserId) ? opt.votes : opt.votes + 1,
+                voters: voters.includes(currentUserId) ? voters : [...voters, currentUserId],
+              };
+            } else {
+              // Remove current user if they previously voted for this option
+              return {
+                ...opt,
+                voted: false,
+                votes: voters.includes(currentUserId) ? opt.votes - 1 : opt.votes,
+                voters: voters.filter(v => v !== currentUserId),
+              };
+            }
+          }),
           totalVotes: poll.totalVotes + 1,
         };
       }
@@ -189,6 +207,7 @@ const GroupDetail = () => {
         id: idx + 1,
         text,
         votes: 0,
+        voters: [],
       })),
       totalVotes: 0,
       anonymousVoting,
@@ -459,7 +478,20 @@ const GroupDetail = () => {
 
               {/* Poll-level reactions */}
               <div className="flex items-center justify-between pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground">{poll.totalVotes} total votes</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">{poll.totalVotes} total votes</p>
+                  {!poll.anonymousVoting && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewVotesPoll(poll)}
+                      className="h-7 text-xs"
+                    >
+                      <Users className="h-3 w-3 mr-1" />
+                      View votes
+                    </Button>
+                  )}
+                </div>
                 <button
                   onClick={() => toggleReactions(poll.id)}
                   className="text-lg hover:scale-125 transition-transform"
@@ -613,6 +645,49 @@ const GroupDetail = () => {
           </SheetContent>
         </Sheet>
       )}
+
+      {/* View Votes Dialog */}
+      <Dialog open={viewVotesPoll !== null} onOpenChange={() => setViewVotesPoll(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Poll Votes</DialogTitle>
+          </DialogHeader>
+          {viewVotesPoll && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">{viewVotesPoll.title}</h3>
+              {viewVotesPoll.options.map((option) => (
+                <div key={option.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{option.text}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {option.votes} {option.votes === 1 ? 'vote' : 'votes'}
+                    </span>
+                  </div>
+                  {option.voters && option.voters.length > 0 ? (
+                    <div className="pl-4 space-y-1">
+                      {option.voters.map((voterId) => {
+                        const voter = members.find(m => m.id === voterId);
+                        return (
+                          <div key={voterId} className="flex items-center gap-2 text-sm">
+                            <div className="h-6 w-6 rounded-full bg-[hsl(var(--teal))]/10 flex items-center justify-center text-xs font-semibold text-[hsl(var(--teal))]">
+                              {voter?.name.charAt(0) || '?'}
+                            </div>
+                            <span className="text-muted-foreground">
+                              {voter?.name || 'Unknown User'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground pl-4">No votes yet</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
