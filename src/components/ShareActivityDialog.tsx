@@ -61,6 +61,22 @@ export const ShareActivityDialog = ({ open, onOpenChange, activity }: ShareActiv
     if (!selectedGroup || !activity) return;
     
     const group = mockGroups.find(g => g.id === selectedGroup);
+    
+    // Create a formatted message for the activity
+    const activityMessage = {
+      id: Date.now(),
+      text: `🎉 Check out this activity!\n\n${activity.title}${activity.venue ? `\n📍 ${activity.venue}` : ''}${activity.date ? `\n📅 ${activity.date}` : ''}${activity.price ? `\n💰 ${activity.price}` : ''}`,
+      sender: "You",
+      timestamp: new Date(),
+      isOwn: true,
+      type: "activity",
+      activityData: activity
+    };
+    
+    // Store the message to be picked up by the chat component
+    const existingMessages = JSON.parse(localStorage.getItem(`chat_messages_${selectedGroup}`) || '[]');
+    localStorage.setItem(`chat_messages_${selectedGroup}`, JSON.stringify([...existingMessages, activityMessage]));
+    
     toast.success(`Activity shared to ${group?.name}`);
     onOpenChange(false);
     navigate(`/group/${selectedGroup}/chat`);
@@ -70,6 +86,27 @@ export const ShareActivityDialog = ({ open, onOpenChange, activity }: ShareActiv
     if (!selectedGroup || !activity) return;
     
     const group = mockGroups.find(g => g.id === selectedGroup);
+    
+    // Create a new poll with the activity
+    const newPoll = {
+      id: Date.now(),
+      title: `${activity.title}${activity.venue ? ` at ${activity.venue}` : ''}`,
+      eventDate: activity.date ? new Date(activity.date) : undefined,
+      location: activity.venue,
+      options: [
+        { id: 1, text: "I'm interested! ✅", votes: 0 },
+        { id: 2, text: "Maybe later 🤔", votes: 0 },
+        { id: 3, text: "Not this time ❌", votes: 0 }
+      ],
+      totalVotes: 0,
+      anonymousVoting: false,
+      activityData: activity
+    };
+    
+    // Store the poll to be picked up by the group detail component
+    const existingPolls = JSON.parse(localStorage.getItem(`group_polls_${selectedGroup}`) || '[]');
+    localStorage.setItem(`group_polls_${selectedGroup}`, JSON.stringify([newPoll, ...existingPolls]));
+    
     toast.success(`Poll created in ${group?.name}`);
     onOpenChange(false);
     navigate(`/group/${selectedGroup}`);
@@ -132,7 +169,7 @@ export const ShareActivityDialog = ({ open, onOpenChange, activity }: ShareActiv
         <div className="flex gap-2 pt-4">
           <Button
             variant="outline"
-            className="flex-1"
+            className="flex-1 border-2 hover:bg-secondary"
             onClick={handleShareToChat}
             disabled={!selectedGroup}
           >
@@ -140,7 +177,7 @@ export const ShareActivityDialog = ({ open, onOpenChange, activity }: ShareActiv
             Share to Chat
           </Button>
           <Button
-            className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
+            className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white shadow-md"
             onClick={handleCreatePoll}
             disabled={!selectedGroup}
           >

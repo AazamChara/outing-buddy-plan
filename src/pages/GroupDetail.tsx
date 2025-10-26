@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
@@ -75,6 +75,16 @@ const GroupDetail = () => {
   const [eventTime, setEventTime] = useState("");
   const [location, setLocation] = useState("");
   const [anonymousVoting, setAnonymousVoting] = useState(false);
+
+  // Load shared polls from localStorage
+  useEffect(() => {
+    const sharedPolls = localStorage.getItem(`group_polls_${id}`);
+    if (sharedPolls) {
+      const parsedPolls = JSON.parse(sharedPolls);
+      setPolls(prev => [...parsedPolls, ...prev]);
+      localStorage.removeItem(`group_polls_${id}`); // Clear after loading
+    }
+  }, [id]);
 
   const [groupName, setGroupName] = useState("Adventure Squad");
   const [groupPhoto, setGroupPhoto] = useState<string>();

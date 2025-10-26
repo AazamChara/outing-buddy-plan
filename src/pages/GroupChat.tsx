@@ -56,6 +56,16 @@ const GroupChat = () => {
 
   const groupName = "Adventure Squad";
 
+  // Load shared activities from localStorage
+  useEffect(() => {
+    const sharedMessages = localStorage.getItem(`chat_messages_${id}`);
+    if (sharedMessages) {
+      const parsedMessages = JSON.parse(sharedMessages);
+      setMessages(prev => [...prev, ...parsedMessages]);
+      localStorage.removeItem(`chat_messages_${id}`); // Clear after loading
+    }
+  }, [id]);
+
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
