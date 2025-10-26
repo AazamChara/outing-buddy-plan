@@ -127,25 +127,8 @@ const Index = () => {
     
     try {
       // Ensure we have a valid authenticated session
-      if (!user || !session) {
+      if (!user) {
         throw new Error("Please sign in to create a group");
-      }
-
-      // Double-check the session is still valid and get fresh session
-      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !currentSession) {
-        throw new Error("Your session has expired. Please sign in again.");
-      }
-
-      // Verify user profile exists (needed for foreign key constraint)
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || !profile) {
-        throw new Error("Your profile is still being set up. Please wait a moment and try again.");
       }
 
       // Upload photo if exists
