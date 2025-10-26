@@ -3,175 +3,118 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ScrollArea } from "./ui/scroll-area";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface Notification {
-  id: string;
-  type: "poll" | "group" | "invite" | "message";
+  id: number;
+  type: "poll" | "group" | "invite";
   title: string;
   message: string;
-  created_at: string;
+  timestamp: Date;
   read: boolean;
-  related_id: string | null;
+  groupId?: number;
+  pollId?: number;
+  groupData?: {
+    id: number;
+    name: string;
+    memberCount: number;
+    imageUrl: string;
+  };
 }
 
 export const Header = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-
-  useEffect(() => {
-    if (user) {
-      fetchNotifications();
-
-      // Subscribe to realtime notifications
-      const channel = supabase
-        .channel(`user-${user.id}-notifications`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            setNotifications(prev => [payload.new as Notification, ...prev]);
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
-
-  const fetchNotifications = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setNotifications((data || []) as Notification[]);
-    } catch (error: any) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
+  const [notifications, setNotifications] = useState<Notification[]>([
+    {
+      id: 1,
+      type: "poll",
+      title: "New Poll",
+      message: "John created a new poll in Adventure Squad",
+      timestamp: new Date(2025, 9, 25, 14, 30),
+      read: false,
+      groupId: 1,
+      pollId: 1,
+    },
+    {
+      id: 2,
+      type: "invite",
+      title: "Group Invite",
+      message: "Jane invited you to join Foodie Friends",
+      timestamp: new Date(2025, 9, 25, 10, 15),
+      read: false,
+      groupData: {
+        id: 10,
+        name: "Foodie Friends",
+        memberCount: 8,
+        imageUrl: "/placeholder.svg",
+      },
+    },
+    {
+      id: 3,
+      type: "group",
+      title: "New Group",
+      message: "You were added to Weekend Warriors",
+      timestamp: new Date(2025, 9, 24, 16, 45),
+      read: true,
+    },
+  ]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = async (id: string) => {
-    try {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id);
-
-      setNotifications(notifications.map(n => 
-        n.id === id ? { ...n, read: true } : n
-      ));
-    } catch (error: any) {
-      console.error('Error marking notification as read:', error);
-    }
+  const markAsRead = (id: number) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
   };
 
-  const markAllAsRead = async () => {
-    if (!user) return;
-
-    try {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false);
-
-      setNotifications(notifications.map(n => ({ ...n, read: true })));
-    } catch (error: any) {
-      console.error('Error marking all as read:', error);
-    }
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
-  const handleAcceptInvite = async (notification: Notification) => {
-    try {
-      // Update invite status
-      const { error } = await supabase
-        .from('group_invites')
-        .update({ status: 'accepted' })
-        .eq('group_id', notification.related_id)
-        .eq('invited_user', user?.id);
-
-      if (error) throw error;
-
+  const handleAcceptInvite = (notification: Notification) => {
+    if (notification.groupData) {
+      // Add group to user's groups
+      const savedGroups = localStorage.getItem('groups');
+      const groups = savedGroups ? JSON.parse(savedGroups) : [];
+      
+      groups.push({
+        ...notification.groupData,
+        lastActivity: "Just joined",
+        hasNotifications: false,
+      });
+      
+      localStorage.setItem('groups', JSON.stringify(groups));
+      
       // Remove notification
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notification.id);
-
       setNotifications(notifications.filter(n => n.id !== notification.id));
       
-      toast.success("Group invite accepted!");
+      toast.success(`You've joined ${notification.groupData.name}!`);
       setOpen(false);
       navigate('/');
-    } catch (error: any) {
-      console.error('Error accepting invite:', error);
-      toast.error("Failed to accept invite");
     }
   };
 
-  const handleDeclineInvite = async (notification: Notification) => {
-    try {
-      // Update invite status
-      await supabase
-        .from('group_invites')
-        .update({ status: 'declined' })
-        .eq('group_id', notification.related_id)
-        .eq('invited_user', user?.id);
-
-      // Remove notification
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notification.id);
-
-      setNotifications(notifications.filter(n => n.id !== notification.id));
-      toast.success("Group invite declined");
-    } catch (error: any) {
-      console.error('Error declining invite:', error);
-    }
+  const handleDeclineInvite = (notification: Notification) => {
+    setNotifications(notifications.filter(n => n.id !== notification.id));
+    toast.success("Group invite declined");
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
-    await markAsRead(notification.id);
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
     
-    if (notification.type === "poll" && notification.related_id) {
-      // Need to get the group_id from the poll
-      const { data: poll } = await supabase
-        .from('polls')
-        .select('group_id')
-        .eq('id', notification.related_id)
-        .single();
-
-      if (poll) {
-        navigate(`/group/${poll.group_id}`);
+    if (notification.type === "poll" && notification.groupId) {
+      // Store poll ID to scroll to it
+      if (notification.pollId) {
+        localStorage.setItem('scroll_to_poll', notification.pollId.toString());
       }
+      navigate(`/group/${notification.groupId}`);
       setOpen(false);
-    } else if (notification.type === "invite" && notification.related_id) {
-      // For invites, related_id is the group_id
-      navigate(`/group/${notification.related_id}`);
+    } else if (notification.type === "group" && notification.groupId) {
+      navigate(`/group/${notification.groupId}`);
       setOpen(false);
     }
   };
@@ -189,8 +132,7 @@ export const Header = () => {
     }
   };
 
-  const formatTimestamp = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatTimestamp = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
@@ -295,7 +237,7 @@ export const Header = () => {
                                 {notification.message}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {formatTimestamp(notification.created_at)}
+                                {formatTimestamp(notification.timestamp)}
                               </p>
                             </div>
                           </div>

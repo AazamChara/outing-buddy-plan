@@ -47,21 +47,6 @@ const Activities = () => {
 
   const filters = ["For You", "Dining", "Events", "Movies"];
 
-  // Initialize with stored location if available
-  useEffect(() => {
-    const savedLat = localStorage.getItem("user_latitude");
-    const savedLng = localStorage.getItem("user_longitude");
-    const permission = localStorage.getItem("location_permission");
-    
-    if (permission === "granted" && savedLat && savedLng) {
-      setUserLocation({
-        latitude: parseFloat(savedLat),
-        longitude: parseFloat(savedLng),
-        name: `${parseFloat(savedLat).toFixed(2)}°, ${parseFloat(savedLng).toFixed(2)}°`
-      });
-    }
-  }, []);
-
   useEffect(() => {
     if (userLocation) {
       fetchActivities();

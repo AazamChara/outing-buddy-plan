@@ -7,207 +7,118 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
-import { WelcomeDialog } from "@/components/WelcomeDialog";
+import { useState } from "react";
+import { PermissionsDialog } from "@/components/PermissionsDialog";
 import { ContactSelector } from "@/components/ContactSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 interface Group {
-  id: string;
+  id: number;
   name: string;
-  description: string | null;
-  photo_url: string | null;
-  created_by: string;
-  created_at: string;
-  member_count?: number;
+  memberCount: number;
+  lastActivity: string;
+  imageUrl: string;
+  hasNotifications: boolean;
 }
+
+const initialGroups: Group[] = [
+  {
+    id: 1,
+    name: "Adventure Squad",
+    memberCount: 5,
+    lastActivity: "Last outing: Movie Night",
+    imageUrl: groupPlaceholder,
+    hasNotifications: true,
+  },
+  {
+    id: 2,
+    name: "Foodie Friends",
+    memberCount: 8,
+    lastActivity: "Planning: Restaurant Week",
+    imageUrl: groupPlaceholder,
+    hasNotifications: false,
+  },
+  {
+    id: 3,
+    name: "Weekend Warriors",
+    memberCount: 6,
+    lastActivity: "Last outing: Hiking Trail",
+    imageUrl: groupPlaceholder,
+    hasNotifications: true,
+  },
+];
 
 const Index = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, session } = useAuth();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [groups, setGroups] = useState<Group[]>(() => {
+    const savedGroups = localStorage.getItem('groups');
+    return savedGroups ? JSON.parse(savedGroups) : initialGroups;
+  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [groupPhoto, setGroupPhoto] = useState<File | null>(null);
   const [groupPhotoPreview, setGroupPhotoPreview] = useState<string | null>(null);
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
   const isMobile = useIsMobile();
 
-  // Check if onboarding is needed
+  // Save groups to localStorage whenever they change
   useEffect(() => {
-    const onboardingCompleted = localStorage.getItem("onboarding_completed");
-    if (!onboardingCompleted && user) {
-      setShowWelcome(true);
-    }
-  }, [user]);
+    localStorage.setItem('groups', JSON.stringify(groups));
+  }, [groups]);
 
+  // Reload groups when returning to this page
   useEffect(() => {
-    fetchGroups();
-
-    // Subscribe to realtime group updates
-    const channel = supabase
-      .channel('groups-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'groups'
-        },
-        () => {
-          fetchGroups();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const handleFocus = () => {
+      const savedGroups = localStorage.getItem('groups');
+      if (savedGroups) {
+        setGroups(JSON.parse(savedGroups));
+      }
     };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const fetchGroups = async () => {
-    try {
-      if (!user || !session) {
-        setLoading(false);
-        return;
-      }
+  const handleCreateGroup = () => {
+    const newGroup: Group = {
+      id: groups.length + 1,
+      name: groupName,
+      memberCount: 1,
+      lastActivity: description || "Just created",
+      imageUrl: groupPhotoPreview || groupPlaceholder,
+      hasNotifications: false,
+    };
 
-      const { data, error } = await supabase
-        .from('groups')
-        .select(`
-          *,
-          group_members!inner(user_id)
-        `)
-        .eq('group_members.user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Get member counts for each group
-      const groupsWithCounts = await Promise.all(
-        (data || []).map(async (group) => {
-          const { count } = await supabase
-            .from('group_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('group_id', group.id);
-          
-          return {
-            ...group,
-            member_count: count || 0
-          };
-        })
-      );
-
-      setGroups(groupsWithCounts);
-    } catch (error: any) {
-      console.error('Error fetching groups:', error);
-      toast({
-        title: "Error loading groups",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!groupName.trim()) return;
+    setGroups([newGroup, ...groups]);
     
-    setIsCreating(true);
+    // Create a default poll for the new group
+    const defaultPoll = {
+      id: 1,
+      title: "When should we meet?",
+      eventDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+      eventTime: "18:00",
+      location: "",
+      options: [
+        { id: 1, text: "This Weekend", votes: 0 },
+        { id: 2, text: "Next Weekend", votes: 0 },
+        { id: 3, text: "Weekday Evening", votes: 0 },
+      ],
+      totalVotes: 0,
+      anonymousVoting: false,
+    };
     
-    try {
-      // Ensure we have a valid authenticated session
-      if (!user) {
-        throw new Error("Please sign in to create a group");
-      }
-
-      // Upload photo if exists
-      let photoUrl = null;
-      if (groupPhoto) {
-        const fileExt = groupPhoto.name.split('.').pop();
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError, data: uploadData } = await supabase.storage
-          .from('group-photos')
-          .upload(filePath, groupPhoto);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('group-photos')
-          .getPublicUrl(filePath);
-        
-        photoUrl = publicUrl;
-      }
-
-      // Create group
-      const { data: groupData, error: groupError } = await supabase
-        .from('groups')
-        .insert({
-          name: groupName,
-          description: description || null,
-          photo_url: photoUrl,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (groupError) throw groupError;
-
-      // Invite selected friends
-      if (selectedFriends.length > 0) {
-        const phoneNumbers = selectedFriends.map(f => f.phone);
-        
-        // Find users by phone
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id')
-          .in('phone', phoneNumbers);
-
-        if (profiles && profiles.length > 0) {
-          await supabase
-            .from('group_invites')
-            .insert(
-              profiles.map(profile => ({
-                group_id: groupData.id,
-                invited_by: user.id,
-                invited_user: profile.id
-              }))
-            );
-        }
-      }
-
-      toast({
-        title: "Group created!",
-        description: "Your group has been created successfully.",
-      });
-
-      setIsCreateDialogOpen(false);
-      resetForm();
-      navigate(`/group/${groupData.id}`);
-    } catch (error: any) {
-      console.error('Error creating group:', error);
-      toast({
-        title: "Error creating group",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const resetForm = () => {
+    // Store the default poll for the new group
+    const existingPolls = localStorage.getItem(`group_polls_${newGroup.id}`);
+    const polls = existingPolls ? JSON.parse(existingPolls) : [];
+    polls.push(defaultPoll);
+    localStorage.setItem(`group_polls_${newGroup.id}`, JSON.stringify(polls));
+    
+    setIsCreateDialogOpen(false);
+    
+    // Reset form
     setGroupName("");
     setDescription("");
     setSelectedFriends([]);
@@ -220,6 +131,7 @@ const Index = () => {
       const file = e.target.files[0];
       setGroupPhoto(file);
       
+      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setGroupPhotoPreview(reader.result as string);
@@ -228,23 +140,9 @@ const Index = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen pb-20 md:pb-8 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen pb-20 md:pb-8">
-      <WelcomeDialog 
-        open={showWelcome} 
-        onComplete={() => {
-          setShowWelcome(false);
-          fetchGroups();
-        }} 
-      />
+      <PermissionsDialog />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Groups Section */}
         <section className="mb-8">
@@ -259,14 +157,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {groups.map((group, index) => (
               <div key={group.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                <GroupCard
-                  name={group.name}
-                  memberCount={group.member_count || 0}
-                  lastActivity={group.description || "No description"}
-                  imageUrl={group.photo_url || groupPlaceholder}
-                  hasNotifications={false}
-                  onClick={() => navigate(`/group/${group.id}`)}
-                />
+                <GroupCard {...group} onClick={() => navigate(`/group/${group.id}`)} />
               </div>
             ))}
           </div>
@@ -279,13 +170,14 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold mb-2">No groups yet</h3>
               <p className="text-muted-foreground mb-6">Gather your crew! Create your first group to start planning.</p>
-              <Button variant="hero" size="lg" onClick={() => setIsCreateDialogOpen(true)}>
+              <Button variant="hero" size="lg">
                 <Plus className="mr-2 h-5 w-5" />
                 Create Your First Group
               </Button>
             </div>
           )}
         </section>
+
       </div>
 
       {/* Floating Action Button */}
@@ -326,6 +218,7 @@ const Index = () => {
                 </div>
               </div>
 
+              {/* Group Name */}
               <div className="space-y-2">
                 <Label htmlFor="group-name-mobile">Group Name</Label>
                 <Input
@@ -336,6 +229,7 @@ const Index = () => {
                 />
               </div>
 
+              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description-mobile">Description (Optional)</Label>
                 <Textarea
@@ -348,6 +242,7 @@ const Index = () => {
                 />
               </div>
 
+              {/* Add Friends from Contacts */}
               <div className="space-y-2">
                 <Label>Add Friends</Label>
                 <ContactSelector onContactsSelected={setSelectedFriends} />
@@ -358,21 +253,21 @@ const Index = () => {
                 )}
               </div>
 
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 sticky bottom-0 bg-background pb-4">
                 <Button
                   variant="outline"
                   className="flex-1"
                   onClick={() => setIsCreateDialogOpen(false)}
-                  disabled={isCreating}
                 >
                   Cancel
                 </Button>
                 <Button
                   className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
                   onClick={handleCreateGroup}
-                  disabled={!groupName.trim() || isCreating}
+                  disabled={!groupName.trim()}
                 >
-                  {isCreating ? "Creating..." : "Create Group"}
+                  Create Group
                 </Button>
               </div>
             </div>
@@ -405,6 +300,7 @@ const Index = () => {
                 </div>
               </div>
 
+              {/* Group Name */}
               <div className="space-y-2">
                 <Label htmlFor="group-name">Group Name</Label>
                 <Input
@@ -415,6 +311,7 @@ const Index = () => {
                 />
               </div>
 
+              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
                 <Textarea
@@ -427,6 +324,7 @@ const Index = () => {
                 />
               </div>
 
+              {/* Add Friends from Contacts */}
               <div className="space-y-2">
                 <Label>Add Friends</Label>
                 <ContactSelector onContactsSelected={setSelectedFriends} />
@@ -437,21 +335,21 @@ const Index = () => {
                 )}
               </div>
 
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
                   className="flex-1"
                   onClick={() => setIsCreateDialogOpen(false)}
-                  disabled={isCreating}
                 >
                   Cancel
                 </Button>
                 <Button
                   className="flex-1 bg-[hsl(var(--teal))] hover:bg-[hsl(var(--teal-dark))] text-white"
                   onClick={handleCreateGroup}
-                  disabled={!groupName.trim() || isCreating}
+                  disabled={!groupName.trim()}
                 >
-                  {isCreating ? "Creating..." : "Create Group"}
+                  Create Group
                 </Button>
               </div>
             </div>
